@@ -1,0 +1,295 @@
+!     Include file for Fluid structure interaction problem
+
+      logical fsi_ifrot       ! if we are solving for angular velocity/position
+      parameter (fsi_ifrot=.true.)
+
+      logical fsi_remove_base
+      parameter (fsi_remove_base=.true.) ! remove forces due to initial state
+
+!     Stokes' solution arrays
+!-------------------------------------------------- 
+      REAL AMP_VX(LX1,LY1,LZ1,LELV)  
+      REAL AMP_VY(LX1,LY1,LZ1,LELV)
+      REAL AMP_VZ(LX1,LY1,LZ1,LELV)
+      REAL AMP_PR(LX2,LY2,LZ2,LELV)
+
+      common /FSI_SOLN/ AMP_VX,AMP_VY,AMP_VZ,AMP_PR
+
+!     Gradients of baseflow 
+!-------------------------------------------------- 
+      REAL FSI_GRVX0(LX1,LY1,LZ1,LELV,3)        ! Grad.Vx 
+      REAL FSI_GRVY0(LX1,LY1,LZ1,LELV,3)        ! Grad.Vy
+      REAL FSI_GRVZ0(LX1,LY1,LZ1,LELV,3)        ! Grad.Vz
+
+      common /FSI_GRAD0/ FSI_GRVX0,FSI_GRVY0,
+     $                   FSI_GRVZ0
+
+
+!     Mask arrays
+!-------------------------------------------------- 
+      REAL AMP_V1MASK(LX1,LY1,LZ1,LELV)
+      REAL AMP_V2MASK(LX1,LY1,LZ1,LELV)
+      REAL AMP_V3MASK(LX1,LY1,LZ1,LELV)
+      REAL FSI_MASK(LX1,LY1,LZ1,LELV)           ! Mask for Arnoldi
+
+      COMMON /FSI_MASK/ AMP_V1MASK,AMP_V2MASK,AMP_V3MASK,FSI_MASK
+
+!     Projection arrays. Only Pressure projection for now
+!-------------------------------------------------- 
+      INTEGER AMP_MPROJ
+      PARAMETER (AMP_MPROJ = 3)           ! No of saved projections
+
+      REAL AMP_PRPROJ(LX2,LY2,LZ2,LELV,AMP_MPROJ)
+
+      REAL PBAR(LX2*LY2*LZ2*LELV)
+      REAL PNEW(LX2*LY2*LZ2*LELV)
+      REAL PBRR(LX2*LY2*LZ2*LELV)
+      REAL ALPHA(AMP_MPROJ),WORK(AMP_MPROJ)
+      REAL ALPHAN,DTLAST
+      INTEGER NPREV,MPREV
+
+      COMMON /FSI_PROJ/ AMP_PRPROJ
+
+      COMMON /FSI_ORTHOX/ PBAR,PNEW,PBRR
+      COMMON /FSI_ORTHOS/ ALPHA,WORK,ALPHAN,DTLAST
+      COMMON /FSI_ORTHOI/ NPREV,MPREV
+
+!     Lift,drag,torque for NS solution
+!-------------------------------------------------- 
+      real fs_dragx, fs_dragpx, fs_dragvx,
+     $     fs_dragy, fs_dragpy, fs_dragvy,
+     $     fs_dragz, fs_dragpz, fs_dragvz,
+
+     $     fs_torqx, fs_torqpx, fs_torqvx,
+     $     fs_torqy, fs_torqpy, fs_torqvy,
+     $     fs_torqz, fs_torqpz, fs_torqvz
+
+      common /Forc_s/ fs_dragx(0:maxobj),fs_dragpx(0:maxobj),
+     $                fs_dragvx(0:maxobj),
+     $                fs_dragy(0:maxobj),fs_dragpy(0:maxobj),
+     $                fs_dragvy(0:maxobj),
+     $                fs_dragz(0:maxobj),fs_dragpz(0:maxobj),
+     $                fs_dragvz(0:maxobj),
+c
+     $                fs_torqx(0:maxobj),fs_torqpx(0:maxobj),
+     $                fs_torqvx(0:maxobj),
+     $                fs_torqy(0:maxobj),fs_torqpy(0:maxobj),
+     $                fs_torqvy(0:maxobj),
+     $                fs_torqz(0:maxobj),fs_torqpz(0:maxobj),
+     $                fs_torqvz(0:maxobj)
+
+
+!     Forces due to Impulsive Motion (Green's function)
+!-------------------------------------------------- 
+      real fg_dragx, fg_dragpx, fg_dragvx,
+     $     fg_dragy, fg_dragpy, fg_dragvy,
+     $     fg_dragz, fg_dragpz, fg_dragvz,
+
+     $     fg_torqx, fg_torqpx, fg_torqvx,
+     $     fg_torqy, fg_torqpy, fg_torqvy,
+     $     fg_torqz, fg_torqpz, fg_torqvz
+
+      common /Forc_g/ fg_dragx(0:maxobj),fg_dragpx(0:maxobj),
+     $                fg_dragvx(0:maxobj),
+     $                fg_dragy(0:maxobj),fg_dragpy(0:maxobj),
+     $                fg_dragvy(0:maxobj),
+     $                fg_dragz(0:maxobj),fg_dragpz(0:maxobj),
+     $                fg_dragvz(0:maxobj),
+c
+     $                fg_torqx(0:maxobj),fg_torqpx(0:maxobj),
+     $                fg_torqvx(0:maxobj),
+     $                fg_torqy(0:maxobj),fg_torqpy(0:maxobj),
+     $                fg_torqvy(0:maxobj),
+     $                fg_torqz(0:maxobj),fg_torqpz(0:maxobj),
+     $                fg_torqvz(0:maxobj)
+
+!   Lift,drag,torque for Adjoint NS solution (eta equation)
+!-------------------------------------------------- 
+      real fsadj_dragx, fsadj_dragpx, fsadj_dragvx,
+     $     fsadj_dragy, fsadj_dragpy, fsadj_dragvy,
+     $     fsadj_dragz, fsadj_dragpz, fsadj_dragvz,
+
+     $     fsadj_torqx, fsadj_torqpx, fsadj_torqvx,
+     $     fsadj_torqy, fsadj_torqpy, fsadj_torqvy,
+     $     fsadj_torqz, fsadj_torqpz, fsadj_torqvz
+
+      common /Forcs_adj/ fsadj_dragx (0:maxobj),
+     $                   fsadj_dragpx(0:maxobj),
+     $                   fsadj_dragvx(0:maxobj),
+     $                   fsadj_dragy (0:maxobj),
+     $                   fsadj_dragpy(0:maxobj),
+     $                   fsadj_dragvy(0:maxobj),
+     $                   fsadj_dragz (0:maxobj),
+     $                   fsadj_dragpz(0:maxobj),
+     $                   fsadj_dragvz(0:maxobj),
+c
+     $                   fsadj_torqx (0:maxobj),
+     $                   fsadj_torqpx(0:maxobj),
+     $                   fsadj_torqvx(0:maxobj),
+     $                   fsadj_torqy (0:maxobj),
+     $                   fsadj_torqpy(0:maxobj),
+     $                   fsadj_torqvy(0:maxobj),
+     $                   fsadj_torqz (0:maxobj),
+     $                   fsadj_torqpz(0:maxobj),
+     $                   fsadj_torqvz(0:maxobj)
+
+
+!   Lift,drag,torque for Adjoint NS solution (Green's function)
+!-------------------------------------------------- 
+      real fgadj_dragx, fgadj_dragpx, fgadj_dragvx,
+     $     fgadj_dragy, fgadj_dragpy, fgadj_dragvy,
+     $     fgadj_dragz, fgadj_dragpz, fgadj_dragvz,
+
+     $     fgadj_torqx, fgadj_torqpx, fgadj_torqvx,
+     $     fgadj_torqy, fgadj_torqpy, fgadj_torqvy,
+     $     fgadj_torqz, fgadj_torqpz, fgadj_torqvz
+
+      common /Forcg_adj/ fgadj_dragx (0:maxobj),
+     $                   fgadj_dragpx(0:maxobj),
+     $                   fgadj_dragvx(0:maxobj),
+     $                   fgadj_dragy (0:maxobj),
+     $                   fgadj_dragpy(0:maxobj),
+     $                   fgadj_dragvy(0:maxobj),
+     $                   fgadj_dragz (0:maxobj),
+     $                   fgadj_dragpz(0:maxobj),
+     $                   fgadj_dragvz(0:maxobj),
+c
+     $                   fgadj_torqx (0:maxobj),
+     $                   fgadj_torqpx(0:maxobj),
+     $                   fgadj_torqvx(0:maxobj),
+     $                   fgadj_torqy (0:maxobj),
+     $                   fgadj_torqpy(0:maxobj),
+     $                   fgadj_torqvy(0:maxobj),
+     $                   fgadj_torqz (0:maxobj),
+     $                   fgadj_torqpz(0:maxobj),
+     $                   fgadj_torqvz(0:maxobj)
+
+
+!     Lift,drag,torque due to initial flow
+!-------------------------------------------------- 
+      real fs0_dragx, fs0_dragpx, fs0_dragvx,
+     $     fs0_dragy, fs0_dragpy, fs0_dragvy,
+     $     fs0_dragz, fs0_dragpz, fs0_dragvz,
+
+     $     fs0_torqx, fs0_torqpx, fs0_torqvx,
+     $     fs0_torqy, fs0_torqpy, fs0_torqvy,
+     $     fs0_torqz, fs0_torqpz, fs0_torqvz
+
+      common /Forc_F0/ fs0_dragx(0:maxobj),fs0_dragpx(0:maxobj),
+     $                 fs0_dragvx(0:maxobj),
+     $                 fs0_dragy(0:maxobj),fs0_dragpy(0:maxobj),
+     $                 fs0_dragvy(0:maxobj),
+     $                 fs0_dragz(0:maxobj),fs0_dragpz(0:maxobj),
+     $                 fs0_dragvz(0:maxobj),
+c
+     $                 fs0_torqx(0:maxobj),fs0_torqpx(0:maxobj),
+     $                 fs0_torqvx(0:maxobj),
+     $                 fs0_torqy(0:maxobj),fs0_torqpy(0:maxobj),
+     $                 fs0_torqvy(0:maxobj),
+     $                 fs0_torqz(0:maxobj),fs0_torqpz(0:maxobj),
+     $                 fs0_torqvz(0:maxobj)
+
+
+!     Sturctural parameters
+!-------------------------------------------------- 
+      real fsi_stiff          ! spring stiffness. (Positive)
+      real fsi_damp           ! damping coefficient. (Negative)
+      real fsi_inertia        ! total mass/moment of inertia
+      real fsi_x0             ! x0 of rotational axis
+      real fsi_y0             ! y0 of rotational axis
+      real fsi_rescale        ! scale force/moments due to additional span
+
+      real eta                ! position
+      real etav               ! velocity
+      real etaa               ! acceleration
+      real etav_s             ! extrapolated velocity
+      real etav_g             ! Velocity/Rotational velocity for Stokes' step
+      real eta_ini            ! Initial position
+      real etav_ini           ! Initial velocity
+      real fsi_alpha          ! correction magnitude
+      real eta_s              ! Position at next step
+      real fsi_eta_wt         ! Weight for eta in Arnoldi
+      real fsi_etav_wt        ! Weight for etav in Arnoldi
+
+
+      Common /FSI_STRUC1/ fsi_stiff,fsi_damp,fsi_inertia,fsi_x0,fsi_y0,
+     $                   fsi_rescale,eta,etav,etaa,etav_s,etav_g,
+     $                   eta_ini,etav_ini,fsi_alpha,eta_s,
+     $                   fsi_eta_wt,fsi_etav_wt 
+
+      real fsi_Fk             ! Spring force
+      real fsi_Fd             ! Damping force
+      real fsi_Fs             ! Fluid forces (NS)
+      real fsi_Fb             ! Fluid forces (Base/Initial-flow)
+      real fsi_Fg             ! Fluid forces (Green's function)
+      real fsi_Ff             ! Total Fluid forces
+      real fsi_Ft             ! Total forces
+
+      Common /FSI_FORCES/ fsi_Fk,fsi_Fd,fsi_Fs,fsi_Fb,fsi_Fg,fsi_Ff,
+     $		       	  fsi_Ft
+
+      real etalag(LORDER-1)      ! Position lag arrays   
+      real etavlag(LORDER-1)     ! lag values for velocity
+      real etaalag(LORDER-1)     ! lag values for acceleration
+
+      Common /FSI_STRUC2/ etalag,etavlag,etaalag
+
+      logical iffsi           ! if we are doing fsi simulations
+      logical fsi_ifinit      ! if fsi has been initialized
+      logical fsi_iftermso    ! if output force terms
+
+      Common /FSI_SOLVEl/ iffsi,fsi_ifinit,fsi_iftermso
+
+
+!     I/O and Restart arrays
+!--------------------------------------------------  
+      integer fsi_nrst
+      parameter (fsi_nrst=4)          ! Currently we use 4 restart files. 
+      real fsi_rst_eta(fsi_nrst)      ! Position lag arrays   
+      real fsi_rst_etav(fsi_nrst)     ! lag values for velocity
+      integer fsi_rst_fli             ! file no for input
+
+      character*11 fsi_rst_fname
+      parameter (fsi_rst_fname='fsi_restart')
+
+      character*11 fsi_rst_arnoldi
+      parameter (fsi_rst_arnoldi='fsi_arn_rst')
+
+      character*15 fsi_egv_arnoldi
+      parameter (fsi_egv_arnoldi='fsi_arn_egv.txt')
+
+      character*10 fsi_fname1
+      parameter (fsi_fname1 = 'fsi_io.out')
+      integer fsi_iunit1
+
+      character*13 fsi_fname2
+      parameter (fsi_fname2 = 'fsi_terms.out')
+      integer fsi_iunit2
+
+      real*8 fsi_timea,fsi_timei        ! Timing
+
+      Common /FSI_TIMEr/ fsi_timea,fsi_timei
+      Common /FSI_RSTr/ fsi_rst_eta,fsi_rst_etav
+      Common /FSI_RSTi/ fsi_rst_fli,fsi_iunit1,fsi_iunit2
+
+
+!     Additional variables for Arnoldi
+!--------------------------------------------------  
+
+      integer NVECAFSI        ! No of FSI Degrees of freedom (for Arnoldi)
+
+      Common /FSI_MISCI/ NVECAFSI
+
+
+      real eta_workda(3)         ! eta in workda array for X
+      real etav_workda(3)        ! etav in workda array for X
+
+      real eta_resida(1)         ! residual for eta
+      real etav_resida(1)        ! residual for etav
+     
+      common /FSI_ARNr/ eta_workda,etav_workda,eta_resida,etav_resida
+
+
+
+
+

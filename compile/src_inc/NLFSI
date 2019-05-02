@@ -1,0 +1,225 @@
+!     Include file for Non-Linear (iterations) Fluid structure interaction problem
+
+      logical nlfsi_ifrot       ! if we are solving for angular velocity/position
+      parameter (nlfsi_ifrot=.false.)
+
+
+!     Gradient of base flow 
+!-------------------------------------------------- 
+      REAL NLFSI_GRVX0(LX1,LY1,LZ1,LELV,ldim)  
+      REAL NLFSI_GRVY0(LX1,LY1,LZ1,LELV,ldim)
+      REAL NLFSI_GRVZ0(LX1,LY1,LZ1,LELV,ldim)
+
+      common /NLFSI_GRAD0/ NLFSI_GRVX0,NLFSI_GRVY0,
+     $                     NLFSI_GRVZ0
+
+
+!     Velocity at previous time iteration 
+!-------------------------------------------------- 
+      REAL VX0(LX1,LY1,LZ1,LELV)  
+      REAL VY0(LX1,LY1,LZ1,LELV)
+      REAL VZ0(LX1,LY1,LZ1,LELV)
+      REAL PR0(LX2,LY2,LZ2,LELV)
+      REAL BM0(LX1,LY1,LZ1,LELV)
+
+      REAL NLFSI_MASK(LX1,LY1,LZ1,LELV)		! mask for Arnoldi
+
+      common /NLFSI_SOLN/ VX0,VY0,VZ0,PR0,BM0,NLFSI_MASK
+
+!     Grid Velocity at previous time iteration 
+!-------------------------------------------------- 
+      REAL NLFSI_WX(LX1,LY1,LZ1,LELV)  
+      REAL NLFSI_WY(LX1,LY1,LZ1,LELV)
+      REAL NLFSI_WZ(LX1,LY1,LZ1,LELV)
+
+      common /NLFSI_MSHV/ NLFSI_WX,NLFSI_WY,NLFSI_WZ
+
+
+!     Lag arrays for forcing (Only current time step)
+!-------------------------------------------------- 
+      REAL ABX0(LX1,LY1,LZ1,LELV)  
+      REAL ABY0(LX1,LY1,LZ1,LELV)
+      REAL ABZ0(LX1,LY1,LZ1,LELV)
+
+      common /NLFSI_BF0/ ABX0,ABY0,ABZ0
+
+!     Lift,drag,torque for NS solution
+!-------------------------------------------------- 
+      real nlfs_dragx, nlfs_dragpx, nlfs_dragvx,
+     $     nlfs_dragy, nlfs_dragpy, nlfs_dragvy,
+     $     nlfs_dragz, nlfs_dragpz, nlfs_dragvz,
+
+     $     nlfs_torqx, nlfs_torqpx, nlfs_torqvx,
+     $     nlfs_torqy, nlfs_torqpy, nlfs_torqvy,
+     $     nlfs_torqz, nlfs_torqpz, nlfs_torqvz
+
+      common /nlForc_f/ nlfs_dragx(0:maxobj),nlfs_dragpx(0:maxobj),
+     $                  nlfs_dragvx(0:maxobj),
+     $                  nlfs_dragy(0:maxobj),nlfs_dragpy(0:maxobj),
+     $                  nlfs_dragvy(0:maxobj),
+     $                  nlfs_dragz(0:maxobj),nlfs_dragpz(0:maxobj),
+     $                  nlfs_dragvz(0:maxobj),
+c
+     $                  nlfs_torqx(0:maxobj),nlfs_torqpx(0:maxobj),
+     $                  nlfs_torqvx(0:maxobj),
+     $                  nlfs_torqy(0:maxobj),nlfs_torqpy(0:maxobj),
+     $                  nlfs_torqvy(0:maxobj),
+     $                  nlfs_torqz(0:maxobj),nlfs_torqpz(0:maxobj),
+     $                  nlfs_torqvz(0:maxobj)
+
+
+!   Lift,drag,torque for Adjoint NS solution (for structural eqn)
+!-------------------------------------------------- 
+      real nlfadj_dragx, nlfadj_dragpx, nlfadj_dragvx,
+     $     nlfadj_dragy, nlfadj_dragpy, nlfadj_dragvy,
+     $     nlfadj_dragz, nlfadj_dragpz, nlfadj_dragvz,
+
+     $     nlfadj_torqx, nlfadj_torqpx, nlfadj_torqvx,
+     $     nlfadj_torqy, nlfadj_torqpy, nlfadj_torqvy,
+     $     nlfadj_torqz, nlfadj_torqpz, nlfadj_torqvz
+
+      common /nlForc_adj/ nlfadj_dragx (0:maxobj),
+     $                    nlfadj_dragpx(0:maxobj),
+     $                    nlfadj_dragvx(0:maxobj),
+     $                    nlfadj_dragy (0:maxobj),
+     $                    nlfadj_dragpy(0:maxobj),
+     $                    nlfadj_dragvy(0:maxobj),
+     $                    nlfadj_dragz (0:maxobj),
+     $                    nlfadj_dragpz(0:maxobj),
+     $                    nlfadj_dragvz(0:maxobj),
+c
+     $                    nlfadj_torqx (0:maxobj),
+     $                    nlfadj_torqpx(0:maxobj),
+     $                    nlfadj_torqvx(0:maxobj),
+     $                    nlfadj_torqy (0:maxobj),
+     $                    nlfadj_torqpy(0:maxobj),
+     $                    nlfadj_torqvy(0:maxobj),
+     $                    nlfadj_torqz (0:maxobj),
+     $                    nlfadj_torqpz(0:maxobj),
+     $                    nlfadj_torqvz(0:maxobj)
+
+
+!     Sturctural parameters
+!-------------------------------------------------- 
+      real nlfsi_stiff        ! spring stiffness. (Positive)
+      real nlfsi_damp         ! damping coefficient. (Negative)
+      real nlfsi_inertia      ! total mass/moment of inertia
+      real nlfsi_x0           ! x0 of rotational axis
+      real nlfsi_y0           ! y0 of rotational axis
+      real nlfsi_rescale      ! scale force/moments due to additional span
+      real nlfsi_tol          ! tolerance for convergence
+
+      real psi                ! position
+      real psi_s              ! position extrapolation
+      real psiv               ! velocity
+      real psiv_s             ! extrapolated velocity (Boundary)
+      real psiv_m             ! extrapolated velocity (Mesh)
+      real psia               ! acceleration 
+      real psia_s             ! extrapolated acceleration
+      real psi_ini            ! Initial position
+      real psiv_ini           ! Initial velocity
+
+      real nlfsi_Fk           ! Spring force
+      real nlfsi_Fd           ! Damping forces
+      real nlfsi_Ff           ! Fluid forces
+      real nlfsi_Ft           ! Total forces
+      real nlfsi_Fadj         ! Adjoint Fluid forces (psi eqn)
+
+      real nlfsi_psi_wt	      ! Weight for psi in Arnoldi
+      real nlfsi_psiv_wt      ! Weight for psiv in Arnoldi
+
+
+      Common /NLFSI_STRUC1/ nlfsi_stiff,nlfsi_damp,nlfsi_inertia,
+     $                   nlfsi_x0,nlfsi_y0,nlfsi_rescale,nlfsi_tol,
+     $                   psi,psi_s,psiv,psiv_s,psiv_m,psia,psia_s,
+     $                   psi_ini,psiv_ini,nlfsi_Fk,nlfsi_Ff,
+     $                   nlfsi_Fd,nlfsi_Ft,nlfsi_Fadj,
+     $			 nlfsi_psi_wt,nlfsi_psiv_wt 
+
+
+      real psilag(LORDER-1)      ! Position lag arrays   
+      real psivlag(LORDER-1)     ! lag values for velocity
+      real psialag(LORDER-1)     ! lag values for acceleration
+      real psivmlag(LORDER-1)    ! lag values for mesh velocity
+
+      integer nlfsi_miters    ! max no of iterates to save
+      parameter(nlfsi_miters = 50)
+      real psi_iter(nlfsi_miters)         ! iterate solutions for psi
+      real psi_res(nlfsi_miters)          ! residues for psi
+      real psiv_iter(nlfsi_miters)        ! iterate solutions for psiv
+      real psiv_res(nlfsi_miters)         ! residues for psiv
+      real psia_iter(nlfsi_miters)        ! iterate solutions for psia
+      real psia_res(nlfsi_miters)         ! residues for psia
+      real nlfsi_omegai(nlfsi_miters)     ! iteration correction
+      real nlfsi_rnorm(nlfsi_miters)      ! residual norm
+      real omega_prev                     ! omega from previous time step
+
+      Common /NLFSI_STRUC2/ psilag,psivlag,psialag,psivmlag,psi_iter,
+     $                   psi_res,psiv_iter,psiv_res,psia_iter,
+     $                   psia_res,nlfsi_omegai,nlfsi_rnorm,
+     $                   omega_prev
+
+
+      logical ifnlfsi		  ! if FSI using non-linear iterations
+      logical nlfsi_ifinit      ! if nlfsi has been initialized
+      logical nlfsi_iftermso    ! if output terms for debugging
+      logical nlfsi_ifconv      ! if solution has converged
+
+      Common /NLFSI_SOLVEl/ ifnlfsi,nlfsi_ifinit,nlfsi_iftermso,
+     $            	    nlfsi_ifconv
+
+      integer nlfsi_iter        ! internal iteration number
+      Common /NLFSI_SOLVEi/ nlfsi_iter
+
+
+!     I/O and Restart arrays
+!--------------------------------------------------  
+      integer nlfsi_nrst
+      parameter (nlfsi_nrst=4)          ! Currently we use 4 restart files. 
+      real nlfsi_rst_psi(nlfsi_nrst)      ! Position lag arrays   
+      real nlfsi_rst_psiv(nlfsi_nrst)     ! lag values for velocity
+      integer nlfsi_rst_fli             ! file no for input
+
+      character*13 nlfsi_rst_fname
+      parameter (nlfsi_rst_fname='nlfsi_restart')
+
+      character*13 nlfsi_rst_arnoldi
+      parameter (nlfsi_rst_arnoldi='nlfsi_arn_rst')
+
+      character*17 nlfsi_egv_arnoldi
+      parameter (nlfsi_egv_arnoldi='nlfsi_arn_egv.txt')
+
+      character*12 nlfsi_fname1
+      parameter (nlfsi_fname1 = 'nlfsi_io.out')
+      integer nlfsi_iunit1
+
+      character*15 nlfsi_fname2
+      parameter (nlfsi_fname2 = 'nlfsi_terms.out')
+      integer nlfsi_iunit2
+
+      real*8 nlfsi_timea,nlfsi_timei        ! Timing
+
+      Common /NLFSI_TIMEr/ nlfsi_timea,nlfsi_timei
+      Common /NLFSI_RSTr/  nlfsi_rst_psi,nlfsi_rst_psiv
+      Common /NLFSI_RSTi/  nlfsi_rst_fli,nlfsi_iunit1,nlfsi_iunit2
+
+
+!     Additional variables for Arnoldi
+!--------------------------------------------------  
+
+      integer NVECA_NLFSI        ! No of FSI Degrees of freedom (for Arnoldi)
+
+      Common /NLFSI_MISCI/ NVECA_NLFSI
+
+
+      real psi_workda(3)         ! psi in workda array for X
+      real psiv_workda(3)        ! psiv in workda array for X
+
+      real psi_resida(1)         ! residual for psi
+      real psiv_resida(1)        ! residual for psi
+     
+      common /NLFSI_ARNr/ psi_workda,psiv_workda,psi_resida,psiv_resida
+     
+
+
+      

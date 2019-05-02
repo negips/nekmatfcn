@@ -1,0 +1,16 @@
+!     common blocks fro conjugated heat transfer
+
+!     scaling factors for velocity and temperature
+!     chcst_sc is the scaling for the norm --> m2/(s2K2)
+!     chcff_v and chcff_T are the coefficients for the pareto curve
+      real chcst_sc,chcff_v,chcff_T
+!     gravitational field
+      real chgrx, chgry, chgrz
+!     Rayleight and Prandtl numbers
+      real chRa, chPr
+!      INTEGER nupdate
+!     common blocks
+      common /cht_rescale/ chcst_sc,chcff_v,chcff_T
+      common /cht_gravity/ chgrx, chgry, chgrz
+      common /cht_param/ chRa, chPr
+!,nupdate

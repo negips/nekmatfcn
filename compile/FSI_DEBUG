@@ -1,0 +1,17 @@
+!     Debugging common block
+
+      real dr1,dr2,dr3
+      common /fsidebug1/ dr1(lx1,ly1,lz1,lelt),
+     $                  dr2(lx1,ly1,lz1,lelt),
+     $                  dr3(lx1,ly1,lz1,lelt)
+
+      real dr4,dr5,dr6
+      common /fsidebug2/ dr4(lx1,ly1,lz1,lelt),
+     $                  dr5(lx1,ly1,lz1,lelt),
+     $                  dr6(lx1,ly1,lz1,lelt)
+
+      real dr7,dr8,dr9
+      common /fsidebug3/ dr7(lx1,ly1,lz1,lelt),
+     $                  dr8(lx1,ly1,lz1,lelt),
+     $                  dr9(lx1,ly1,lz1,lelt)
+

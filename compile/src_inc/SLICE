@@ -1,0 +1,40 @@
+!     Variable declarations for 2D slices
+
+      INTEGER SLICE_LOWN                        ! No of locally owned elements
+      INTEGER SLICE_NSAVES                      ! No Time history slices
+
+      INTEGER SLICE_MAXSAVES                    ! Max number of saves
+      PARAMETER (SLICE_MAXSAVES=100)       
+      INTEGER SLICE_NVAR                        ! No of saved variables      
+      PARAMETER (SLICE_NVAR=4)                  ! X/Y + variables
+
+      INTEGER SLICE_GNUM                        ! Global no of slice elements
+      INTEGER SLICE_GMAP(LELT)                  ! Mapping for 2D slice
+      INTEGER SLICE_IDIR                        ! Normal direction to slice plane
+      INTEGER SLICE_COMP                        ! Save iteration
+      INTEGER SLICE_INDEX                       ! Slice plane in element
+      PARAMETER (SLICE_INDEX=3)
+
+      LOGICAL SLICE_IFSLICE(lelt)               ! If element has slice
+
+
+      REAL SLICE_Z0                             ! Reference point z0
+
+      REAL SLICE_TIME(SLICE_MAXSAVES)           ! Time of slice
+!      REAL SLICE_XM0(LX1,LY1,LELT)              ! X GLL
+!      REAL SLICE_YM0(LX1,LY1,LELT)              ! Y GLL
+      REAL SLICE_XM1(LX1,LY1,SLICE_MAXSAVES,LELT)              ! X GLL
+      REAL SLICE_YM1(LX1,LY1,SLICE_MAXSAVES,LELT)              ! Y GLL
+      REAL SLICE_VAR(LX1,LY1,SLICE_MAXSAVES,LELT,SLICE_NVAR)      ! saved variables
+
+
+      COMMON /SLICEi/ SLICE_LOWN, SLICE_NSAVES, SLICE_GNUM,SLICE_IDIR,
+     $                SLICE_COMP
+
+      COMMON /SLICEiv/ SLICE_GMAP
+
+      COMMON /SLICEr/ SLICE_Z0
+
+      COMMON /SLICErv/ SLICE_TIME, SLICE_XM1, SLICE_YM1, SLICE_VAR
+
+      COMMON /SLICElv/ SLICE_IFSLICE

@@ -1,0 +1,93 @@
+!=======================================================================
+!     Adam Peplinski; 2015.10.09
+!     This is input file for Arnoldi method for Nek5000 using ARPACK library
+!=======================================================================
+!     array sizes
+      integer LDIMA           ! max size of Krylov space (maxncv in ARPCK notation)
+      parameter (LDIMA = 250)
+
+      integer LVA1V, LVA1T, LVAS, LVA2
+!     single vector size
+      parameter (LVA1V = LPX1*LPY1*LPZ1*LPELV) ! velocity mesh
+      parameter (LVA1T = LPX1*LPY1*LPZ1*LPELT) ! temperature mesh
+      parameter (LVA2  = LPX2*LPY2*LPZ2*LPELV) ! pressure mesh
+
+!     one vector for all velocity components (maxn in ARPACK notation)
+!     be careful about including temperature
+      parameter (LVAS = LVA1V*LDIM + LVA2 + LVA1T*min(1,LDIMT)*0 + 2)    ! 2 FSI degrees of freedom
+
+      integer ARNKRYLOV       ! Size of Krylov space (ncv in ARPCK notation)
+      integer ARNEGV          ! Number of eigenvalues to calculate (nev in ARPCK notation)
+
+!     number of the restart and save files
+      integer ARNISTART
+      integer ARNISTOP
+
+      integer NVECAS          ! length of the vector transferred to arpack 
+                              ! combining velocity, pressure, temperature and FSI
+
+!     timing arpack
+      real ARPTIMET                 ! ARPTIMET - total time spent within arnoldi
+      real ARPTIME1,ARPTIME2        ! ARPTIME1,ARPTIME2 - temporary storage
+
+c     Parameters for ARPACK
+c     work array sizes for arpack
+      integer WDDIMA, WLDIMA, WEDIMA
+      parameter (WDDIMA = 3*LVAS)
+      parameter (WLDIMA = 3*LDIMA*LDIMA+6*LDIMA)
+      parameter (WEDIMA = 3*LDIMA)
+
+c     arrays
+      real WORKDA(WDDIMA), WORKLA(WLDIMA), WORKEA(WEDIMA),
+     $     VBASEA(LVAS,LDIMA), RESIDA(LVAS), DRIARP(LDIMA,4)
+
+c     integer parameters
+      integer IDOARP
+      integer IPARP(11)
+      integer IPNTARP(14)
+      integer NWLARP
+      integer INFARP
+      integer IERRARP
+
+c     real parameters
+      real SIGARP(2)
+
+c     logical parameters
+      logical RVARP, SELARP(LDIMA)
+
+c     character parametres
+      character BMATARP*1, WHICHARP*2, HOWARP*1
+
+c     parameters for PARPACK with checkpointing
+      integer NPARP, NCARP
+
+      real RNMARP
+
+      integer IDOARP0, NVECAS0, ARNEGV0, ARNKRYLOV0, IPARP0(11),
+     $     IPNTARP0(14), NWLARP0, INFARP0, NPARP0, NCARP0,
+     $     TSTSTEP0, TSTMODE0
+
+      character BMATARP0*1, WHICHARP0*2
+
+      real TSTTOL0, RNMARP0, DTARP0
+
+c     common blocks
+c     integer variables
+      common /ARNI/ ARNKRYLOV, ARNEGV, ARNISTART, ARNISTOP, NVECAS
+
+      common /ARPI/ IDOARP, IPARP, IPNTARP, NWLARP, INFARP, IERRARP,
+     $     NPARP, NCARP, IDOARP0, NVECAS0, ARNEGV0, ARNKRYLOV0, IPARP0,
+     $     IPNTARP0, NWLARP0, INFARP0, NPARP0, NCARP0, TSTSTEP0,
+     $     TSTMODE0
+
+!     real variables
+      common /ARPTMP/ ARPTIMET,ARPTIME1,ARPTIME2
+
+      Common /ARPR/ SIGARP, WORKDA, WORKLA, WORKEA,
+     $     VBASEA, RESIDA, DRIARP, RNMARP, TSTTOL0, RNMARP0, DTARP0
+
+c     logical variables
+      common /ARPL/ RVARP, SELARP
+
+c     character variables
+      common /ARPCH/ BMATARP, WHICHARP, HOWARP, BMATARP0, WHICHARP0

@@ -1,0 +1,12 @@
+!     missing definitions in CMTDATA
+      real U 
+      real PHIG
+      real RES1, RES2, RES3
+      real GRADU
+      real CONVH, TOTALH
+      real USRF
+      real TCOEF
+      integer NCUT, NCUTD
+      integer IRHO, ICP, ICV, IMU, IKND, ILAM, IRG, IRPU, IRPV, IRPW,
+     $     IRET, IUX, IUY, IUZ, IPR, ITHM, ISND, IPH, ICVF, ICPF,
+     $     IMUF, IKNDF, ILAMF, IU1, IU2, IU3, IU4, IU5, NQQ

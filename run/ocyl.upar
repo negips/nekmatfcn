@@ -1,0 +1,94 @@
+&USERPAR
+ UPRM_PRB=100,
+! L2FREQ=5000,
+! FIXGEOM=0,
+! NEW_DT=0.0E-5,
+ /
+&CHKPOINT
+ CHKPTSTEP=5000,
+ IFCHKPTRST=F,
+ FULL_PR_IN=F,
+ FULL_PR_OUT=F,
+ /
+&WING_MVMSH
+ AXIS_X0=0.0,
+ AXIS_Y0=0.0,
+ PTCH_KRED=1.0,
+ PTCH_AMP=0.0,
+ DEF_ST=0.1,
+ DEF_END=10.0, 
+ INI_AOA=0.0, 
+ MW_DEF='mv ',
+ PTCH_START=0.E-3, 
+ /
+&RTFILTER
+ RT_KUT=1,
+ RT_KAI=-0.0E+1,
+ RT_WGHT=1.0,
+ RT_IFBOYD=.FALSE.,
+ /
+&FST
+ fst_ti=0.000,
+ fst_il=0.015,
+ /
+&STATS
+ STAT_COMP=2,
+ STAT_OUTP=50000,
+ STAT_IDIR=3,                 
+ STAT_IFSTPTS=F,
+ STATPTS_COMP=50,
+ T_STAT_COMP=2000,
+ T_STAT_AVGITER=1000,    
+ /
+&SURF
+ NSURFS=1,
+ SURF_DEF='mv ',
+ SURF_COMP=250,
+ SURF_AVGITER=1,
+ SURF_FLDOUT=5000,
+ /
+&SLICE
+ SLICE_COMP=250,
+ SLICE_Z0=0.12,
+ /
+&SFD
+ IFSFD         =     F             ,
+ SFDD          =     2.0           ,
+ SFDCHI        =     20.E-0        ,
+ SFDFCONV      =     200           ,
+ SFDIRST       =     4             ,
+ /
+&FSI
+ IFFSI            =T,
+ ETA_INI          =0.0,
+ ETAV_INI         =1.0E-7,
+ FSI_STIFF        =24.1720657,        ! Should be positive
+ FSI_DAMP         =-0.01,             ! Should be negative
+ FSI_INERTIA      =54.9778714,
+ FSI_X0           =0.0,
+ FSI_Y0           =0.,
+ FSI_RST_FLI      =0,
+ FSI_RESCALE      =1.0,
+ FSI_IFTERMSO     =T,
+ FSI_BASE_FORC    =F,
+ /
+
+&NLFSI
+ IFNLFSI            =F,
+ PSI_INI            =0.0,
+ PSIV_INI           =0.00,
+ NLFSI_STIFF        =0.4731177,       ! Should be positive
+ NLFSI_DAMP         =-0.007,          ! Should be negative
+ NLFSI_INERTIA      =1.198421,
+ NLFSI_X0           =0.,
+ NLFSI_Y0           =0.,
+ NLFSI_RESCALE      =1.0,
+ NLFSI_TOL          =1.0E-08,
+ NLFSI_RST_FLI      =0,
+ NLFSI_IFTERMSO     =T,
+ /
+
+
+
+
+

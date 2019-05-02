@@ -1,0 +1,40 @@
+C
+C	ADJOINT VARIABLES
+C
+C
+      COMMON /ADJ_REAL/ VXADJ     (LX1,LY1,LZ1,LELV)
+     $               , VYADJ     (LX1,LY1,LZ1,LELV)
+     $               , VZADJ     (LX1,LY1,LZ1,LELV)
+     $               , TPADJ     (LX1,LY1,LZ1,LELT)
+     $               , VXADJOLD     (LX1,LY1,LZ1,LELV)
+     $               , VYADJOLD     (LX1,LY1,LZ1,LELV)
+     $               , VZADJOLD     (LX1,LY1,LZ1,LELV)
+     $               , TPADJOLD     (LX1,LY1,LZ1,LELT)
+     $               , VXPIC     (LX1,LY1,LZ1,LELV)
+     $               , VYPIC     (LX1,LY1,LZ1,LELV)
+     $               , VZPIC     (LX1,LY1,LZ1,LELV)
+     $               , TPIC     (LX1,LY1,LZ1,LELT)
+     $               , VXPFC     (LX1,LY1,LZ1,LELV)
+     $               , VYPFC     (LX1,LY1,LZ1,LELV)
+     $               , VZPFC     (LX1,LY1,LZ1,LELV)
+     $               , TPFC     (LX1,LY1,LZ1,LELT)
+     $               , ENDTIME, ADJTOL, ALPHA_MAX
+
+      REAL        ENDTIME, ADJTOL, ALPHA_MAX
+      REAL TPADJ, TPADJOLD, VXPIC, VYPIC, VZPIC, TPIC, VXPFC, VYPFC,
+     $     VZPFC, TPFC
+
+      COMMON /ADJ_INTEGER/ NPASSADJ, MAXPASSADJ
+      INTEGER  NPASSADJ, MAXPASSADJ
+
+      COMMON /ADJ_LOGICAL/ IFADJ
+      LOGICAL IFADJ
+
+      REAL dTdx, dTdy, dTdz
+      COMMON /dTgrad/
+     $ dTdx(lx1*ly1*lz1*lelt),
+     $ dTdy(lx1*ly1*lz1*lelt), 
+     $ dTdz(lx1*ly1*lz1*lelt) 
+
+      REAL g_adj(3), beta_b
+      COMMON /gravity_adjoint/ g_adj, beta_b

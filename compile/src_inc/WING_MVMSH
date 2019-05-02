@@ -1,0 +1,29 @@
+!    Definitions for simple mesh deformations 
+
+      real umeshx,umeshy,umeshz                   ! Mesh velocities
+
+      common /rv_mymeshv/    umeshx(lx1,ly1,lz1,lelt)       
+     $                    ,  umeshy(lx1,ly1,lz1,lelt)
+     $                    ,  umeshz(lx1,ly1,lz1,lelt)
+
+      real     def_st, def_end          ! Start and end of deformation (radial distance)   
+     $    ,    axis_x0,axis_y0          ! Pitch axis                   
+     $    ,    ptch_kred,ptch_amp       ! reduced frequency and amplitude
+     $    ,    ini_aoa                  ! Initial angle of attack
+     $    ,    ptch_start               ! Start time of pitching
+     $    ,    msh_rescale              ! rescale mesh size? 
+
+      common /rs_mypitch/    def_st, def_end
+     $                    ,  axis_x0,axis_y0
+     $                    ,  ptch_kred,ptch_amp
+     $                    ,  ini_aoa
+     $                    ,  ptch_start
+     $                    ,  msh_rescale 
+      
+      real basev
+      
+      common /rv_mybasev/ basev(lx1*ly1*lz1*lelt)   ! Base interpolation function
+
+      character*3     mw_def                 ! Definition for surface.  
+
+      common /cv_mybc/ mw_def

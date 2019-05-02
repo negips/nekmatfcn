@@ -1,0 +1,8 @@
+!     missing definitions in CTIMER
+      integer NMXMF,NMXMS,NDSUM,NAXHM,NCOPY,NINVC,NINV3
+      integer         NSOLV,NGSUM,NDSND,NDADD,NCDTP,NMLTD,NPREP
+     $               ,NPRES,NHMHZ,NGOP ,NGOP1,NDOTT,NBSOL,NBSO2
+     $               ,NSETT,NSLVB,NUSBC,NDDSL,NCRSL,NDSMX,NDSMN
+     $               ,NGSMN,NGSMX,NESLV,NBBBB,NCCCC,NDDDD,NEEEE
+     $               ,NVDSS,NADVC,NSPRO,NGOP_SYNC,NSYC,NWAL,NGP2
+

@@ -1,0 +1,61 @@
+C     Dimension for Boostconv subroutine
+C
+C     HCUBE array dimensions
+C
+      integer bconv_nkeys
+      parameter (bconv_nkeys = 5)
+      character*132 bconv_dictkey(bconv_nkeys)
+      data
+     $  bconv_dictkey(1)  / '_BOOSTCONV' /   ! section name
+     $  bconv_dictkey(2)  / 'boostFreq' /       ! BC_FREQ
+     $  bconv_dictkey(3)  / 'residualTol' /     ! BC_TOL
+     $  bconv_dictkey(4)  / 'on' /              ! IFBOOSTCONV
+     $  bconv_dictkey(5)  / 'verbose' /         ! IFBOOSTVERBOSE
+
+!     runtime parameters used for 3D run only
+      integer bconv_n3dkeys
+      parameter (bconv_n3dkeys = 0)
+      integer bconv_l3dkey(bconv_n3dkeys)
+!     data bconv_l3dkey /  /
+
+      integer N_BC
+      parameter (N_BC = 15)                          ! subspace dimension
+      integer BOOSTVER                               ! Temporary. Needs to be removed after testing
+!
+!     Commonblocks for the subroutines
+!
+      REAL VINX_BC,VINY_BC,VINZ_BC,TIN_BC,VOUTX_BC,VOUTY_BC,
+     $	     VOUTZ_BC,TOUT_BC
+!
+      COMMON /INOUT/ VINX_BC (LX1,LY1,LZ1,LELV,N_BC),
+     $	     VINY_BC (LX1,LY1,LZ1,LELV,N_BC),
+     $	     VINZ_BC (LX1,LY1,LZ1,LELV,N_BC),
+     $	     TIN_BC (LX1,LY1,LZ1,LELT,N_BC),
+     $	     VOUTX_BC(LX1,LY1,LZ1,LELV,N_BC),
+     $	     VOUTY_BC(LX1,LY1,LZ1,LELV,N_BC),
+     $	     VOUTZ_BC(LX1,LY1,LZ1,LELV,N_BC),
+     $	     TOUT_BC(LX1,LY1,LZ1,LELT,N_BC)
+!   
+      REAL VXOLD,VYOLD,VZOLD,TOLD,DVX,DVY,DVZ,DTBC
+     $       ,VXOL1,VYOL1,VZOL1,TOL1
+!
+      COMMON /BC_DATA/ VXOLD(LX1,LY1,LZ1,LELV),
+     $	     VYOLD(LX1,LY1,LZ1,LELV),
+     $	     VZOLD(LX1,LY1,LZ1,LELV),
+     $	     TOLD(LX1,LY1,LZ1,LELT),
+     $	     DVX(LX1,LY1,LZ1,LELV),
+     $	     DVY(LX1,LY1,LZ1,LELV),
+     $	     DVZ(LX1,LY1,LZ1,LELV),
+     $	     DTBC(LX1,LY1,LZ1,LELT),
+     $	     VXOL1(LX1,LY1,LZ1,LELV),
+     $	     VYOL1(LX1,LY1,LZ1,LELV),
+     $	     VZOL1(LX1,LY1,LZ1,LELV),
+     $	     TOL1(LX1,LY1,LZ1,LELT)
+!
+      integer BC_FREQ
+      real BC_TOL
+      logical IFBOOSTCONV,IFBOOSTVERBOSE
+!
+      COMMON/INTBC/ BC_FREQ,BOOSTVER
+      COMMON/REALBC/ BC_TOL
+      COMMON/LOGBC/ IFBOOSTCONV,IFBOOSTVERBOSE

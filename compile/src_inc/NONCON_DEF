@@ -1,0 +1,6 @@
+!     missing definitions in NONCON
+      integer noncon_f, noncon_e, noncon_ip, mortar, imin, mort_m,
+     $        mortar_edge
+      real umult, xsp, ysp, zsp, xch, ych, zch, 
+     $     rtwid, stwid, dtrk, rs
+

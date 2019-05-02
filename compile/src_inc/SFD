@@ -1,0 +1,52 @@
+c
+c     Adam Peplinski; 2012.05.03
+c     This is input file for selective frequency damping (SFD)
+c     for Nek5000
+c
+c     constants
+      integer SFDNRSF
+      parameter (SFDNRSF=4)
+c     variables
+c     filtered velocity field
+      real VSX(LX1,LY1,LZ1,LELV), VSY(LX1,LY1,LZ1,LELV),
+     $     VSZ(LX1,LY1,LZ1,LELV)
+
+c     history of filtered velocity field
+      real VSXLAG(LX1,LY1,LZ1,LELV,3), VSYLAG(LX1,LY1,LZ1,LELV,3),
+     $     VSZLAG(LX1,LY1,LZ1,LELV,3)
+
+c     right hand sides
+      real BFSX(LX1,LY1,LZ1,LELV), BFSY(LX1,LY1,LZ1,LELV),
+     $     BFSZ(LX1,LY1,LZ1,LELV)
+
+c     integer parameters
+c     checkpointing frequency
+c     number of checkpoint file to restart
+c     frequency for saving convegence frequency
+      integer SFDSAVE, SFDIRST, SFDFCONV
+
+c     real parameter;
+c     reverse of filter width;
+c     forcing control parameter
+      real SFDD, SFDCHI
+
+c     logical parameters
+c     do we prform SFD
+c     do we restart
+      logical IFSFD, IFSFDRST
+
+c     timing SFD
+c     SFDTIME - total time spent within SFD
+c     SFDTIME1,SFDTIME2 - temporary storage
+      real SFDTIME,SFDTIME1,SFDTIME2
+
+c     COMMON BLOCKS
+c     integer variables
+      COMMON /SFDI/ SFDSAVE, SFDIRST, SFDFCONV
+c     real variables
+      COMMON /SFDR/ SFDD, SFDCHI, SFDTIME, SFDTIME1, SFDTIME2
+c     real vectors
+      COMMON /SFDRV/ VSX, VSY, VSZ, BFSX, BFSY, BFSZ, VSXLAG, VSYLAG,
+     $     VSZLAG
+c     logical variables
+      COMMON /SFDL/ IFSFD, IFSFDRST

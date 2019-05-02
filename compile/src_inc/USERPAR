@@ -1,0 +1,11 @@
+!     include file to store user parameters
+      integer UPRM_PRB
+
+!     common blocks
+      common /UPARAMI/ UPRM_PRB
+
+      real UPRM_DAMPL
+
+!     common blocks
+      common /UPARAMR/ UPRM_DAMPL
+

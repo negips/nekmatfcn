@@ -1,0 +1,6 @@
+!     missing definitions in AVG
+      real ATIME,TIMEL
+      real UAVG, VAVG, WAVG, TAVG, PAVG
+      real URMS, VRMS, WRMS, TRMS, PRMS, VWMS, WUMS, UVMS
+
+
