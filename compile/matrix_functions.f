@@ -5,13 +5,12 @@
 !
 !======================================================================       
 !---------------------------------------------------------------------- 
-
       subroutine MAT_ZFCN(fA,A,lda,nc,fcn)
 
 !     A    = U*T*U^{-1}      ! Schur decomposition             
 !     f(A) = U*f(T)*U^{-1}
 
-!     Matrix Square root.
+!     Matrix Function
 !     Using the simplified Schur-Parlett Method
 !     Might suffer instabilities if the eigenvalues are too close            
 
@@ -26,13 +25,8 @@
       complex w(nc)
 
       character fcn*4
-      complex zfcn      ! complex scalar function
-     
-      integer i,j,k,p
-      complex s
 
-
-!     Variables for zgemm      
+!     Variables for zgemm 
       complex alpha,beta
       character transA*1,transB*1
 
@@ -40,12 +34,50 @@
       ldu=lda 
       call wrp_zschur(A,lda,nc,U,ldu,w)
 !     A now contains the Complex Upper-Triangular Matrix
+!     U has the Schur vectors      
 
-!     debugging      
-      call write_zmat(A,lda,nc,nc,'T  ')
+!     Calculate Matrix function for a Triangular Matrix
+!     Using Schur-Parlett      
+      call MAT_ZFCN_TRI(fA,A,lda,nc,fcn)
 
-!     debugging      
-!      call write_zmat(U,lda,nc,nc,'U  ')
+!     A=fA*U^{H}
+      alpha = complex(1.0,0)
+      beta  = complex(0.,0.)
+      transA = 'N'
+      transB = 'C'
+      call zgemm(transA,transB,nc,nc,nc,alpha,fA,lda,U,lda,beta,A,lda) 
+
+!     fA=U*A
+      alpha = complex(1.0,0)
+      beta  = complex(0.,0.)
+      transA = 'N'
+      transB = 'N'
+      call zgemm(transA,transB,nc,nc,nc,alpha,U,lda,A,lda,beta,fA,lda) 
+
+
+      return
+      end subroutine MAT_ZFCN
+!----------------------------------------------------------------------
+
+      subroutine MAT_ZFCN_TRI(fA,A,lda,nc,fcn)
+
+!     Apply matrix function to an upper-triangular matrix
+!     Using the simplified Schur-Parlett method.
+!     Might suffer instabilities if the eigenvalues are too close            
+
+      implicit none
+
+      integer lda       ! leading dimension of A
+      integer nc        ! No of columns (and rows considered)
+
+      complex A(lda,nc)
+      complex fA(lda,nc) ! f(A). Assuming same shape as A.
+
+      character fcn*4
+      complex zfcn      ! complex scalar function
+     
+      integer i,j,k,p
+      complex s
 
 !     Zero complex array
       call nek_zzero(fA,lda*nc)
@@ -66,33 +98,13 @@
       enddo
       enddo      
 
-!     debugging      
-      call write_zmat(fA,lda,nc,nc,'fT ')
-
-!     A=fA*U^{H}
-      alpha = complex(1.0,0)
-      beta  = complex(0.,0.)
-      transA = 'N'
-      transB = 'C'
-      call zgemm(transA,transB,nc,nc,nc,alpha,fA,lda,U,lda,beta,A,lda) 
-
-!     debugging      
-!      call write_zmat(A,lda,nc,nc,'fAU')
-
-
-!     fA=U*A
-      alpha = complex(1.0,0)
-      beta  = complex(0.,0.)
-      transA = 'N'
-      transB = 'N'
-      call zgemm(transA,transB,nc,nc,nc,alpha,U,lda,A,lda,beta,fA,lda) 
-
 
       return
-      end subroutine MAT_ZFCN
+      end subroutine MAT_ZFCN_TRI
 !----------------------------------------------------------------------
 
       complex function ZFCN(z,fcn)
+!     Define all the functions we wish to calculate            
 
       complex z
       character fcn*4
