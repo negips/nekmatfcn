@@ -111,6 +111,8 @@
 
       if (fcn.eq.'sqrt') then
         zfcn=sqrt(z)
+      elseif (fcn.eq.'loge') then
+        zfcn=log(z)
       else
         write(6,*) 'Unknown function', fcn
         call exitt 

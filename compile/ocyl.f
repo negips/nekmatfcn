@@ -180,32 +180,17 @@ c-----------------------------------------------------------------------
       integer n,m
       parameter (n=10)
       real matA(n,n),matV(n,n)
-      real wr(n),wi(n)
 
       complex cA(n,n),cV(n,n)
-      complex w(n)
-
-      character outfmt*32
-      character outfmt2*32
 
       integer seed
 
       integer i,j
 
 
-      m=5
+      m=3
 
       if (istep.eq.0) then
-
-        call blank(outfmt,32)
-        write(outfmt,'(A1,I2.2,A13)') '(',m,'(E15.8E2,1x))'
-
-        call blank(outfmt2,32)
-        write(outfmt2,'(A1,I2.2,A27)') '(',m,
-     $                  '(E15.8E2,1x,E15.8E2,A1,1x))'
-
-        write(6,*) outfmt
-        write(6,*) outfmt2
 
         call rzero(matA,m)
         seed = 86456
@@ -220,7 +205,7 @@ c-----------------------------------------------------------------------
 
         write(6,*) ' '
         call write_zmat(cA,n,m,m,'Ain')
-        call MAT_ZFCN(cV,cA,n,m,'sqrt') 
+        call MAT_ZFCN(cV,cA,n,m,'loge') 
         call write_zmat(cV,n,m,m,'fAo')
 
 
