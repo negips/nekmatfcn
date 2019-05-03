@@ -35,7 +35,7 @@
       trans = 'N'
 
 !     Compute Least-Squares in double precision
-      call dgels(trans,m,n,nrhs,Amat,lda,rhs,ldb,LLS_WORKR,LLS_WRL
+      call dgels(trans,m,n,nrhs,Amat,lda,rhs,ldb,LLS_WKR,LLS_WRL
      $           ,info)
 
 !     Error-check
@@ -50,8 +50,8 @@
          call exitt
       else
          if (nid.eq.0) write(6,*) 'DGELS: successful exit!'
-         if (nid.eq.0) write(6,*) '         Optimal LWORKR=',
-     $        int(LLS_WORKR(1)), LLS_WRL
+         if (nid.eq.0) write(6,*) '         Optimal LWKR=',
+     $        int(LLS_WKR(1)), LLS_WRL
       endif
             
       return
@@ -102,7 +102,7 @@
 
 !     Compute SVD in double precision with divide-and-conquer
       call dgesdd(jobz,m,n,Amat,lda,Sigma,U,ldu,VT,ldvt,
-     $     SVD_WORKR,SVD_WRL,SVD_WORKI,info)
+     $     SVD_WKR,SVD_WRL,SVD_WKI,info)
 
 !     Error-check
       if (info.lt.0) then
@@ -116,8 +116,8 @@
          call exitt
       else
          if (nid.eq.0) write(6,*) 'DGESDD: successful exit!'
-         if (nid.eq.0) write(6,*) '         Optimal LWORKR=',
-     $        int(SVD_WORKR(1)), SVD_WRL
+         if (nid.eq.0) write(6,*) '         Optimal LWKR=',
+     $        int(SVD_WKR(1)), SVD_WRL
       endif
             
 !     Output singular values and estimated error bounds
@@ -181,7 +181,7 @@
 
 !     Compute real-Schur decomposition in double precision
       call dgees(jobvs,esort,selec,n,Amat,lda,sdim,wr,wi,VS,ldvs,
-     $     RSCHUR_WORKR,RSCHUR_WRL,RSCHUR_WORKB,info)
+     $     RSCHUR_WKR,RSCHUR_WRL,RSCHUR_WKB,info)
 
 !     Error-check
       if (info.lt.0) then
@@ -207,8 +207,8 @@
         call exitt
       else
          if (nid.eq.0) write(6,*) 'DGEES: successful exit!'
-         if (nid.eq.0) write(6,*) '         Optimal LWORKR=',
-     $        int(RSCHUR_WORKR(1)), RSCHUR_WRL
+         if (nid.eq.0) write(6,*) '         Optimal LWKR=',
+     $        int(RSCHUR_WKR(1)), RSCHUR_WRL
       endif
             
       return
@@ -259,7 +259,7 @@
 
 !     Compute complex-Schur decomposition in double precision
       call cgees(jobvs,esort,selec,n,Amat,lda,sdim,w,VS,ldvs,
-     $     CSCHUR_WORKC,CSCHUR_WCL,CSCHUR_WORKR,CSCHUR_WORKB,info)
+     $     CSCHUR_WKC,CSCHUR_WCL,CSCHUR_WKR,CSCHUR_WKB,info)
 
 !     Error-check
       if (info.lt.0) then
@@ -286,7 +286,7 @@
       else
         if (nid.eq.0) write(6,*) 'CGEES: successful exit!'
         if (nid.eq.0) write(6,*) '         Optimal WCL=',
-     $       int(CSCHUR_WORKC(1)), CSCHUR_WCL
+     $       int(CSCHUR_WKC(1)), CSCHUR_WCL
       endif
             
       return
@@ -337,7 +337,7 @@
 
 !     Compute complex-Schur decomposition in double precision
       call zgees(jobvs,esort,selec,n,Amat,lda,sdim,w,VS,ldvs,
-     $     ZSCHUR_WORKC,ZSCHUR_WCL,ZSCHUR_WORKR,ZSCHUR_WORKB,info)
+     $     ZSCHUR_WKC,ZSCHUR_WCL,ZSCHUR_WKR,ZSCHUR_WKB,info)
 
 !     Error-check
       if (info.lt.0) then
@@ -364,7 +364,7 @@
       else
         if (nid.eq.0) write(6,*) 'ZGEES: successful exit!'
         if (nid.eq.0) write(6,*) '         Optimal WCL=',
-     $       int(ZSCHUR_WORKC(1)), ZSCHUR_WCL
+     $       int(ZSCHUR_WKC(1)), ZSCHUR_WCL
       endif
             
       return

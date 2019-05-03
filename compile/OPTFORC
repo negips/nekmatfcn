@@ -1,1 +1,57 @@
-!     Optimal Forcing using Matrix Logarithm
+!	Author      : Prabal
+!	Description : Optimal forcing
+!
+!---------------------------------------------------------------------- 
+
+      include 'MFN.inc'
+
+!     Krylov Sub-space      
+      integer optfkryl,optfkryl1
+      parameter (optfkryl  = mfnkryl)
+      parameter (optfkryl1 = optfkryl+1)
+
+!     Vector Length      
+      integer vlen3,prlen3,tlen3,fsilen3
+      parameter (vlen3   = lx1*ly1*lz1*lelv*ldim)
+      parameter (prlen3  = lx2*ly2*lz2*lelv)
+      parameter (tlen3   = lx1*ly1*lz1*lelv*0)
+      parameter (fsilen3 = 0)
+
+      integer qlen3
+      parameter (qlen3 = vlen3 + prlen3 + tlen3 + fsilen3)
+
+
+!     Arnoldi Krylov sub-space
+      complex OPTF_Q(qlen3,optfkryl+1)
+      complex OPTF_HS(optfkryl+1,optfkryl)
+
+      complex Ax(qlen3),Axtmp(qlen3)
+
+      common /OPTFGMRESzv/ OPF_Q,OPF_HS,Ax,Axtmp
+
+      real ArWt(qlen3),Axmsk(qlen3)
+
+      common /OPTFGMRESrv/ ArWt,Axmsk
+
+      integer ngs       ! no of Gram-Schmidt
+      integer northo    ! no of Krylov vectors to save
+      integer nkryl     ! current size of krylov space
+      integer vlen      ! length of krylov vector
+
+      common /optfgmresi/ ngs,nkryl,northo,vlen,sstep
+
+      logical optf_uzawa,ifoptf,optf_ifpr
+
+      common /optfgmresl/ nek_uzawa,ifoptf,optf_ifpr
+
+
+!     Variables for Matrix function evaluation
+      include 'MFN.inc'
+
+      integer optf_step ! no of stepper iterations
+
+
+      common /optfmatfi/ ngs,nkryl,northo,vlen,sstep
+
+
+

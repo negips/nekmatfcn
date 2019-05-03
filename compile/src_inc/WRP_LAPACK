@@ -1,29 +1,35 @@
 c     
-c     Common block for LAPACK work arrays
-c
-c     Required workspace:
-c
-c            |                    REAL                  |   INTEGER  | COMPLEX |
-c     --------------------------------------------------------------------------
-c     DGESDD |               5*N*N+N+9*N                |     8*N    |         |
-c     DGELS  |                N+N*BLKSIZ                | 3*N*L+11*N |         |
-c     -------------------------------------------------------------------------- 
-c
-c     N - LKRYL+1
-c     S - SMLSIZ (see LAPACK doc)
-c     L - NLVL   (see LAPACK doc)
-c      
+c     Declaration for LAPACK work arrays
 
 !     load memory controlling variables
 !     for the wrapper 
-      include 'WRP.inc' 
+      include 'MFN.inc'
+
+      integer lapkryl,lapkryl1
+      parameter (lapkryl  = mfnkryl)  ! We can change this depending on usage
+      parameter (lapkryl1 = lapkryl+1)
+
+!     Switches for different arrays
+!      1 : Arrays sizes allocated
+!     -1 : All array sizes set to 1 to save memory
+
+!     DP - Double Precision
+!     SP - Single Precision      
+
+      integer SW_LLS
+      parameter (SW_LLS=-1)         ! Linear-Least-Squares (DP)
+      integer SW_SVD
+      parameter (SW_SVD=-1)         ! SVD (DP)
+      integer SW_RSCHUR
+      parameter (SW_RSCHUR=-1)      ! Real Schur Decomposition (DP)
+      integer SW_CSCHUR
+      parameter (SW_CSCHUR=-1)      ! Complex Schur Decomposition (SP)
+      integer SW_ZSCHUR
+      parameter (SW_ZSCHUR=1)       ! Complex Schur Decomposition (DP)
+
 
 !---------------------------------------------------------------------- 
 !     Arrays for Real Linear-Least-Squares      
-
-!     Memory switch for Linear-Least-Squares
-      integer SW_LLS
-      parameter (SW_LLS=-1)
 
 c     Length of arrays 
       integer LLS_WRL               ! Work Array Size (Real)
@@ -32,101 +38,84 @@ c     Length of arrays
       integer BLKSIZ                   ! See doc.
       parameter (BLKSIZ=64)
 
-      parameter (LLS_WRL=max(SW_LLS*(LKRYL1+LKRYL1*BLKSIZ),1))
-      parameter (LLS_WIL=max(SW_LLS*(3*LKRYL1*2+11*LKRYL1),1))  
+      parameter (LLS_WRL=max(SW_LLS*(LAPKRYL1+LAPKRYL1*BLKSIZ),1))
+      parameter (LLS_WIL=max(SW_LLS*(3*LAPKRYL1*2+11*LAPKRYL1),1))  
 
 c     Work arrays
-      real    LLS_WORKR(LLS_WRL)
-      integer LLS_WORKI(LLS_WIL)
+      real    LLS_WKR(LLS_WRL)
+      integer LLS_WKI(LLS_WIL)
       
 !---------------------------------------------------------------------- 
 !     Arrays for SVD 
 
-!     Memory switch for SVD
-      integer SW_SVD
-      parameter (SW_SVD=-1)
-
 c     Length of arrays 
       integer SVD_WRL               ! Work Array Size (Real)
       integer SVD_WIL               ! Work Array Size (Int)
+
       parameter (SVD_WRL=
-     $            max(SW_SVD*(5*LKRYL1**2+LKRYL1+9*LKRYL1),1))
+     $            max(SW_SVD*(5*LAPKRYL1**2+LAPKRYL1+9*LAPKRYL1),1))
       parameter (SVD_WIL=
-     $            max(SW_SVD*(8*LKRYL1),1))
+     $            max(SW_SVD*(8*LAPKRYL1),1))
 
 c     Work arrays
-      real    SVD_WORKR(SVD_WRL)
-      integer SVD_WORKI(SVD_WIL)
+      real    SVD_WKR(SVD_WRL)
+      integer SVD_WKI(SVD_WIL)
 
 
 !---------------------------------------------------------------------- 
 !     Arrays for Real Schur Decomposition 
 
-!     Memory switch for RSCHUR
-      integer SW_RSCHUR
-      parameter (SW_RSCHUR=1)
-
 c     Length of arrays 
       integer RSCHUR_WRL               ! Work Array Size (Real)
       integer RSCHUR_WBL               ! Work Array Size (Logi)
 
-      parameter (RSCHUR_WRL=max(SW_RSCHUR*(3*LKRYL1),1))
-      parameter (RSCHUR_WBL=max(SW_RSCHUR*(LKRYL1),1))  
+      parameter (RSCHUR_WRL=max(SW_RSCHUR*(3*LAPKRYL1),1))
+      parameter (RSCHUR_WBL=max(SW_RSCHUR*(LAPKRYL1),1))  
 
 c     Work arrays
-      real    RSCHUR_WORKR(RSCHUR_WRL)
-      logical RSCHUR_WORKB(RSCHUR_WBL)
+      real    RSCHUR_WKR(RSCHUR_WRL)
+      logical RSCHUR_WKB(RSCHUR_WBL)
 
 !---------------------------------------------------------------------- 
 !     Arrays for Complex Schur Decomposition 
-
-!     Memory switch for CSCHUR
-      integer SW_CSCHUR
-      parameter (SW_CSCHUR=-1)
 
 c     Length of arrays 
       integer CSCHUR_WRL               ! Work Array Size (Real)
       integer CSCHUR_WCL               ! Work Array Size (Complex)
       integer CSCHUR_WBL               ! Work Array Size (Logi)
-
       
-      parameter (CSCHUR_WCL=max(SW_CSCHUR*(50*LKRYL1),1))
-      parameter (CSCHUR_WRL=max(SW_CSCHUR*(LKRYL1),1))
-      parameter (CSCHUR_WBL=max(SW_CSCHUR*(LKRYL1),1))  
+      parameter (CSCHUR_WCL=max(SW_CSCHUR*(5*LAPKRYL1),1))
+      parameter (CSCHUR_WRL=max(SW_CSCHUR*(LAPKRYL1),1))
+      parameter (CSCHUR_WBL=max(SW_CSCHUR*(LAPKRYL1),1))  
 
 c     Work arrays
-      complex     CSCHUR_WORKC(CSCHUR_WCL)
-      real        CSCHUR_WORKR(CSCHUR_WRL)
-      logical     CSCHUR_WORKB(CSCHUR_WBL)
+      complex     CSCHUR_WKC(CSCHUR_WCL)
+      real        CSCHUR_WKR(CSCHUR_WRL)
+      logical     CSCHUR_WKB(CSCHUR_WBL)
 
 !---------------------------------------------------------------------- 
 !     Arrays for Double Complex Schur Decomposition 
-
-!     Memory switch for ZSCHUR
-      integer SW_ZSCHUR
-      parameter (SW_ZSCHUR=1)
 
 c     Length of arrays 
       integer ZSCHUR_WRL               ! Work Array Size (Real)
       integer ZSCHUR_WCL               ! Work Array Size (Complex)
       integer ZSCHUR_WBL               ! Work Array Size (Logi)
-
       
-      parameter (ZSCHUR_WCL=max(SW_ZSCHUR*(50*LKRYL1),1))
-      parameter (ZSCHUR_WRL=max(SW_ZSCHUR*(LKRYL1),1))
-      parameter (ZSCHUR_WBL=max(SW_ZSCHUR*(LKRYL1),1))  
+      parameter (ZSCHUR_WCL=max(SW_ZSCHUR*(5*LAPKRYL1),1))
+      parameter (ZSCHUR_WRL=max(SW_ZSCHUR*(LAPKRYL1),1))
+      parameter (ZSCHUR_WBL=max(SW_ZSCHUR*(LAPKRYL1),1))  
 
 c     Work arrays
-      complex     ZSCHUR_WORKC(ZSCHUR_WCL)
-      real        ZSCHUR_WORKR(ZSCHUR_WRL)
-      logical     ZSCHUR_WORKB(ZSCHUR_WBL)
+      complex     ZSCHUR_WKC(ZSCHUR_WCL)
+      real        ZSCHUR_WKR(ZSCHUR_WRL)
+      logical     ZSCHUR_WKB(ZSCHUR_WBL)
 
 
 !---------------------------------------------------------------------- 
 !     Common Blocks
 !     Don't really store these arrays for later ...      
-!      common /wrprlvec1/ LLS_WORKR,SVD_WORKR,RSCHUR_WORKR
-!      common /wrpilvec1/ LLS_WORKI,SVD_WORKI,RSCHUR_WORKB
+!      common /wrprlvec1/ LLS_WKR,SVD_WKR,RSCHUR_WKR
+!      common /wrpilvec1/ LLS_WKI,SVD_WKI,RSCHUR_WKB
 
 
 

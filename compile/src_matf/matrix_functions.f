@@ -172,6 +172,42 @@
       return
       end subroutine nek_zsub2
 !---------------------------------------------------------------------- 
+      subroutine nek_zrcol2(x,y,n)
+
+      implicit none
+
+      integer n
+      complex x(n)
+      real y(n)
+      integer i
+
+      do i=1,n
+        x(i)=x(i)*y(i)
+      enddo  
+
+      return
+      end subroutine nek_zrcol2
+!----------------------------------------------------------------------
+
+      subroutine nek_zcmult(x,z,n)
+
+!     Multiply complex array x with a complex z
+
+      implicit none
+
+      integer n
+      complex x(n)
+      complex z
+      integer i
+
+      do i=1,n
+        x(i)=z*x(i)
+      enddo  
+
+      return
+      end subroutine nek_zcmult
+!---------------------------------------------------------------------- 
+
       subroutine nek_zrcmult(x,a,n)
 
 !     Multiply complex array x with real a
@@ -204,9 +240,76 @@
 
       return
       end subroutine nek_zcopy
+!----------------------------------------------------------------------
+      subroutine nek_ri2z(z,x,y,n)
+
+      implicit none
+
+      integer n
+      complex z(n)
+      real x(n),y(n)
+      integer i
+
+      do i=1,n
+        z(i)=complex(x(i),y(i))
+      enddo  
+
+      return
+      end subroutine nek_ri2z
 !---------------------------------------------------------------------- 
+      subroutine nek_r2z(z,x,n)
+
+      implicit none
+
+      integer n
+      complex z(n)
+      real x(n)
+      integer i
+
+      do i=1,n
+        z(i)=complex(x(i),0.)
+      enddo  
+
+      return
+      end subroutine nek_r2z
+!---------------------------------------------------------------------- 
+      subroutine nek_i2z(z,x,n)
+
+      implicit none
+
+      integer n
+      complex z(n)
+      real x(n)
+      integer i
+
+      do i=1,n
+        z(i)=complex(0.,x(i))
+      enddo  
+
+      return
+      end subroutine nek_i2z
+!---------------------------------------------------------------------- 
+
+      subroutine nek_z2ri(x,y,z,n)
+
+      implicit none
+
+      integer n
+      complex z(n)
+      real x(n),y(n)
+      integer i
+
+      do i=1,n
+        x(i)=real(z(i))
+        y(i)=imag(z(i))
+      enddo  
+
+      return
+      end subroutine nek_z2ri
+!---------------------------------------------------------------------- 
+
 !======================================================================
-!     Specialized Algorithms for specific functions
+!     Specialized Algorithms for some functions
 !====================================================================== 
       subroutine MAT_ZFCN_LN(fA,A,lda,nc,pmo)
 
@@ -232,7 +335,7 @@
 
       include 'SIZE_DEF'
       include 'SIZE'
-      include 'WRP.inc'
+      include 'MFN.inc'
 
       integer lda       ! leading dimension of A
       integer ldu       ! leading dimension of U
@@ -244,18 +347,18 @@
       complex fA(lda,nc) ! f(A). Assuming same shape as A.
       complex w(nc)
 
-      complex eye(lkryl1,lkryl1)
-      complex X(lkryl1,lkryl1)
-      complex WK1(lkryl1,lkryl1)
-      complex WK2(lkryl1,lkryl1)
+      complex eye(mfnkryl1,mfnkryl1)
+      complex X(mfnkryl1,mfnkryl1)
+      complex WK1(mfnkryl1,mfnkryl1)
+      complex WK2(mfnkryl1,mfnkryl1)
 
       integer nt
 
       character fcn*4
 
 !     GL weights and nodes
-      real wj(lkryl1)           ! just taking a high enough number
-      real xj(lkryl1)           ! for memory
+      real wj(mfnkryl1)           ! just taking a high enough number
+      real xj(mfnkryl1)           ! for memory
 
 !     Variables for zgemm 
       complex a1,b1
@@ -265,13 +368,13 @@
       integer i,j
 
 !     Calculate Gauss-Legendre Quadrature
-      if (pmo.gt.lkryl1) then
+      if (pmo.gt.mfnkryl1) then
         write(6,*) 'Increase Quadrature memory size for Pade Approx.'
         call exitt
       endif
 
-      call rzero(wj,lkryl1)
-      call rzero(xj,lkryl1)
+      call rzero(wj,mfnkryl1)
+      call rzero(xj,mfnkryl1)
       call ZWGL(xj,wj,pmo)
 
 !     Need the weights and points in [0,1]      
@@ -280,7 +383,7 @@
       call cmult(wj,0.5,pmo)
 
 !     Complex Identity matrix 
-      call nek_zzero(eye,lkryl1*lkryl1)
+      call nek_zzero(eye,mfnkryl1*mfnkryl1)
       do i=1,nc
         eye(i,i)=complex(1.0,0)
       enddo 
@@ -294,7 +397,7 @@
 !     Debugging
 !      call write_zmat(A,lda,nc,nc,'PdT')
 
-      nt = lkryl1*lkryl1
+      nt = mfnkryl1*mfnkryl1
       call nek_zzero(X,nt)
       do i=1,nc
       do j=1,nc
@@ -309,19 +412,14 @@
       do i=1,pmo
         call nek_zcopy(WK2,X,nt)
         call nek_zrcmult(WK2,xj(i),nt)
-        call add2(WK2,eye,nt)
-
-!        call write_zmat(WK2,lkryl1,nc,nc,'WK2')
+        call nek_zadd2(WK2,eye,nt)
 
 !       Matrix inversion 
-        call ztrtri('U','N',nc,WK2,lkryl1,info)
+        call ztrtri('U','N',nc,WK2,mfnkryl1,info)
         if (info.ne.0) then
           write(6,*) 'Matrix inversion unsuccesfull in MAT_FCN_LN'
           call exitt
         endif
-
-!        call write_zmat(WK2,lkryl1,nc,nc,'WKI')
-
 
         call nek_zcopy(WK1,X,nt)
         call nek_zrcmult(WK1,wj(i),nt)
@@ -331,8 +429,8 @@
         b1 = complex(1.,0.)
         transA = 'N'
         transB = 'N'
-        call zgemm(transA,transB,nc,nc,nc,a1,WK2,lkryl1,
-     $             WK1,lkryl1,b1,fA,lda) 
+        call zgemm(transA,transB,nc,nc,nc,a1,WK2,mfnkryl1,
+     $             WK1,mfnkryl1,b1,fA,lda) 
 
       enddo       
 
@@ -353,6 +451,7 @@
 
       return
       end subroutine MAT_ZFCN_LN
+!====================================================================== 
 !----------------------------------------------------------------------
 
 

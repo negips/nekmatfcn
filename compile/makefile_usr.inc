@@ -2,6 +2,7 @@ SRC_INC := ./src_inc
 SRC_USR := ./src_usr
 SRC_STATS := ./stats
 SRC_ARN := ./src_arn
+SRC_MATF := ./src_matf
 $(OBJDIR)/rt_filter.o     :$(SRC_USR)/rt_filter.f;                      $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/uparam.o     :$(SRC_USR)/uparam.f;                      $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/IO_tools.o     :$(SRC_USR)/IO_tools.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
@@ -39,10 +40,12 @@ $(OBJDIR)/arnoldi_arpack.o     :$(SRC_ARN)/arnoldi_arpack.f;                    
 $(OBJDIR)/conht_tools.o     :$(SRC_ARN)/conht_tools.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
 $(OBJDIR)/sponge.o     :$(SRC_ARN)/sponge.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
 $(OBJDIR)/adjnbc.o     :$(SRC_USR)/adjnbc.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
-$(OBJDIR)/psn_arnoldi.o     :$(SRC_USR)/psn_arnoldi.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
+$(OBJDIR)/nek_arnoldi.o     :./nek_arnoldi.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
 $(OBJDIR)/extract_wall_dx.o     :$(SRC_USR)/extract_wall_dx.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
-$(OBJDIR)/wrapper_lapack.o     :./wrapper_lapack.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
-$(OBJDIR)/matrix_functions.o     :./matrix_functions.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
+$(OBJDIR)/wrapper_lapack.o     :$(SRC_MATF)/wrapper_lapack.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
+$(OBJDIR)/matrix_functions.o     :$(SRC_MATF)/matrix_functions.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
+$(OBJDIR)/matf_krylov.o     :$(SRC_MATF)/matf_krylov.f;                      $(F77) -c $(FL2) -I$(SRC_INC) $< -o $@
+
 
 
 

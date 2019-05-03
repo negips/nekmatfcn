@@ -1,0 +1,26 @@
+!	Author:	Prabal
+!	Description: Testing Arnoldi method
+!
+!---------------------------------------------------------------------- 
+
+      include 'ARN.inc'
+
+	real Qortho(qlen2,arnkryl+1)
+	real hessen(arnkryl+1,arnkryl)
+
+	real Ax(qlen2),Axtmp(qlen2),ArWt(qlen2),Axmsk(qlen2)
+
+	common /orthotestv/ qortho,hessen,Ax,Axtmp,ArWt,Axmsk
+
+	integer ngs	      ! no of Gram-Schmidt
+      integer northo    ! no of Krylov vectors to save
+	integer nkryl	! current size of krylov space
+	integer vlen	! length of krylov vector
+      integer pstep     ! no of steps between stepper
+      integer pinistep  ! no of steps before first krylov vector
+
+	common /orthotesti/ ngs,nkryl,northo,vlen,pstep,pinistep
+
+      logical nek_uzawa,ifnekarn,nekarn_ifpr
+
+      common /orthotesl/ nek_uzawa,ifnekarn,nekarn_ifpr

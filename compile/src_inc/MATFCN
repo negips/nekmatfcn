@@ -1,0 +1,53 @@
+!	Author      : Prabal Negi
+!	Description : Declarations for Krylov method for evaluating 
+!                 : matrix functions
+!     Modified    : 03-05-2019
+!
+!---------------------------------------------------------------------- 
+
+      include 'MFN.inc'
+
+!     Vector Length      
+      integer vlen0,prlen0,tlen0,fsilen0
+      parameter (vlen0   = lx1*ly1*lz1*lelv*ldim)
+      parameter (prlen0  = lx2*ly2*lz2*lelv)
+      parameter (tlen0   = lx1*ly1*lz1*lelv*0)
+      parameter (fsilen0 = 0)
+
+      integer qlen0
+      parameter (qlen0 = vlen0 + prlen0 + tlen0 + fsilen0)
+
+
+!     Arnoldi Krylov sub-space
+      complex MATF_Q(qlen0,mfnkryl1)      ! Orthogonal Matrix
+      complex MATF_HS(mfnkryl1,mfnkryl)   ! Hessenberg Matrix
+      complex MATF_HINV(mfnkryl1,mfnkryl) ! Inverse Hessenberg Matrix
+
+      complex MATF_Ax(qlen0)              ! Single vector
+      complex MATF_AxW1(qlen0)             ! Work array
+      complex MATF_AxW2(qlen0)            ! Work array
+
+      common /MATFzv/ MATF_Q,MATF_HS,MATF_Ax
+
+      real MATF_ArWt(qlen0)               ! Arnoldi Weights
+      real MATF_MSK(qlen0)                ! Arnoldi Mask
+
+      common /MATFrv/ MATF_ArWt,MATF_MSK
+
+      integer ngs       ! no of Gram-Schmidt Orthogonalizations
+      integer northo    ! no of Krylov vectors to save
+      integer nkryl     ! current size of krylov space
+      integer vlen      ! length of krylov vector
+      integer sstep     ! no of iterations between Re-Ortho
+
+      common /MATFi/ ngs,nkryl,northo,vlen,sstep
+
+      logical IFMATF          ! if perform Matrix Fcn evals
+      logical MATF_IFPR       ! If we use seminorm
+      logical MATF_UZAWA      ! If use Uzawa for first time step
+
+      common /MATFl/ MATF_UZAWA,IFMATF,MATF_IFPR
+
+
+
+

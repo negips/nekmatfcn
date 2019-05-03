@@ -168,7 +168,6 @@ c-----------------------------------------------------------------------
       INCLUDE 'TSTEP'
       INCLUDE 'INPUT_DEF'
       INCLUDE 'INPUT'
-      INCLUDE 'WRP.inc'       ! CXK - complex kind
 
       integer lt,lt2
       parameter (lt=lx1*ly1*lz1*lelv)
@@ -213,7 +212,7 @@ c-----------------------------------------------------------------------
         call MAT_ZFCN(cV,cA,n,m,'loge') 
         call write_zmat(cV,n,m,m,'fAo')
 
-        pord = 16
+        pord = 5
         call MAT_ZFCN_LN(cV,cB,n,m,pord) 
         call write_zmat(cV,n,m,m,'Pde')
       
