@@ -8,7 +8,7 @@
       integer lkryl     ! No. of Krylov vectors
       integer lkryl1    ! lKRYL+1
 
-      parameter (lkryl=10)
+      parameter (lkryl=20)
       parameter (lkryl1=lkryl+1)
 
 !     Length of Krylov vector     

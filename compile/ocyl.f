@@ -181,14 +181,15 @@ c-----------------------------------------------------------------------
       parameter (n=10)
       real matA(n,n),matV(n,n)
 
-      complex cA(n,n),cV(n,n)
+      complex cA(n,n),cV(n,n),cB(n,n)
+      integer pord                          ! Pade Order
 
       integer seed
 
       integer i,j
 
 
-      m=3
+      m=7
 
       if (istep.eq.0) then
 
@@ -196,10 +197,14 @@ c-----------------------------------------------------------------------
         seed = 86456
         call srand(seed)
 
+        call nek_zzero(cA,n*n)
+        call nek_zzero(cB,n*n)
+
         do i=1,m
         do j=1,m
           matA(i,j) = rand()
           cA(i,j)   = complex(matA(i,j),0)
+          cB(i,j)   = complex(matA(i,j),0)
         enddo
         enddo
 
@@ -208,6 +213,10 @@ c-----------------------------------------------------------------------
         call MAT_ZFCN(cV,cA,n,m,'loge') 
         call write_zmat(cV,n,m,m,'fAo')
 
+        pord = 16
+        call MAT_ZFCN_LN(cV,cB,n,m,pord) 
+        call write_zmat(cV,n,m,m,'Pde')
+      
 
       endif
 
