@@ -2,10 +2,11 @@
 !     Author: Prabal Negi
 !     Description: Routines to calculate Matrix functions.
 !                : Makes use of the wrapper routines for Lapack.
+!     Modified   : 04-05-2019
 !
 !======================================================================       
 !---------------------------------------------------------------------- 
-      subroutine MAT_ZFCN(fA,A,lda,nc,fcn)
+      subroutine MAT_ZFCN(fA,A,lda,nc,fcn,ifinv)
 
 !     A    = U*T*U^{-1}      ! Schur decomposition             
 !     f(A) = U*f(T)*U^{-1}
@@ -26,6 +27,10 @@
 
       character fcn*4
 
+      logical ifinv
+
+      integer info
+
 !     Variables for zgemm 
       complex alpha,beta
       character transA*1,transB*1
@@ -43,6 +48,17 @@
 !     Calculate Matrix function for a Triangular Matrix
 !     Using Schur-Parlett      
       call MAT_ZFCN_TRI(fA,A,lda,nc,fcn)
+
+      if (ifinv) then      
+!       Matrix inversion of a Triangular Matrix
+        call ztrtri('U','N',nc,fA,lda,info)
+        if (info.ne.0) then
+          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN'
+          call exitt
+        endif
+!       fA now contains the inverse
+      endif
+     
 
 !     A=fA*U^{H}
       alpha = complex(1.0,0)
@@ -63,7 +79,9 @@
       end subroutine MAT_ZFCN
 !----------------------------------------------------------------------
 
-      subroutine MAT_ZFCN_TRI(fA,A,lda,nc,fcn)
+      subroutine MAT_ZFCN_TRI(fT,T,lda,nc,fcn)
+
+!     fT = f(T)
 
 !     Apply matrix function to an upper-triangular matrix
 !     Using the simplified Schur-Parlett method.
@@ -71,11 +89,11 @@
 
       implicit none
 
-      integer lda       ! leading dimension of A
+      integer lda       ! leading dimension of T
       integer nc        ! No of columns (and rows considered)
 
-      complex A(lda,nc)
-      complex fA(lda,nc) ! f(A). Assuming same shape as A.
+      complex T(lda,nc)
+      complex fT(lda,nc) ! f(T). Assuming same shape as T.
 
       character fcn*4
       complex zfcn      ! complex scalar function
@@ -84,21 +102,21 @@
       complex s
 
 !     Zero complex array
-      call nek_zzero(fA,lda*nc)
+      call nek_zzero(fT,lda*nc)
       
       do i=1,nc
-        fA(i,i) = zfcn(A(i,i),fcn)
+        fT(i,i) = zfcn(T(i,i),fcn)
       enddo        
       
       do p=1,nc-1
       do i=1,nc-p
         j=i+p
-        s = A(i,j)*(fA(j,j) - fA(i,i))
+        s = T(i,j)*(fT(j,j) - fT(i,i))
         do k=i+1,j-1
-          s = s + A(i,k)*fA(k,j)-fA(i,k)*A(k,j)
+          s = s + T(i,k)*fT(k,j)-fT(i,k)*T(k,j)
         enddo  
-!       Potential division by zero if A(i,i)=-A(j,j) 
-        fA(i,j) = s/(A(j,j)-A(i,i))
+!       Potential division by zero if T(i,i)=-T(j,j) 
+        fT(i,j) = s/(T(j,j)-T(i,i))
       enddo
       enddo      
 
@@ -307,11 +325,14 @@
       return
       end subroutine nek_z2ri
 !---------------------------------------------------------------------- 
-
 !======================================================================
 !     Specialized Algorithms for some functions
+!     Slowly grow this list      
 !====================================================================== 
-      subroutine MAT_ZFCN_LN(fA,A,lda,nc,pmo)
+      subroutine MAT_ZFCN_LN(fA,A,lda,nc,pmo,ifinv)
+
+!     A    = U*T*U^{-1}      ! Schur decomposition             
+!     f(A) = U*f(T)*U^{-1}
 
 !     Calculating Matrix logarithm 
 !     with Schur decomposition and
@@ -326,11 +347,6 @@
 !     w_{i} - Weights of m point Gauss-Legendre Quadrature
 !     x_{i}  - Nodes of m point Gauss-Legendre Quadrature in [0,1]            
 
-!     A    = U*T*U^{-1}      ! Schur decomposition             
-!     f(A) = U*f(T)*U^{-1}
-
-!     Matrix Function
-
       implicit none
 
       include 'SIZE_DEF'
@@ -342,10 +358,88 @@
       integer nc        ! No of columns (and rows considered)
 
       integer pmo       ! order of Pade approximant
+      logical ifinv     ! If get inverse (fA)^{-1}
 
       complex A(lda,nc),U(lda,nc)
       complex fA(lda,nc) ! f(A). Assuming same shape as A.
       complex w(nc)
+
+      integer nt
+
+!     Variables for zgemm 
+      complex a1,b1
+      character transA*1,transB*1
+
+      integer info
+      integer i,j
+
+!     Complex Schur Decomposition (Double-Precision)
+      ldu=lda 
+      call wrp_zschur(A,lda,nc,U,ldu,w)
+!     A now contains the Complex Upper-Triangular Matrix
+!     U has the Schur vectors
+
+!     Debugging
+!      call write_zmat(A,lda,nc,nc,'PdT')
+
+!     Evaluate Pade Approximant
+      call mat_ln_pade(fA,A,lda,nc,pmo)
+
+      if (ifinv) then      
+!       Matrix inversion of a Triangular Matrix
+        call ztrtri('U','N',nc,fA,lda,info)
+        if (info.ne.0) then
+          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN_LN'
+          call exitt
+        endif
+!       fA now contains the inverse
+      endif
+
+!     A=fA*U^{H}
+      a1 = complex(1.,0.)
+      b1 = complex(0.,0.)
+      transA = 'N'
+      transB = 'C'
+      call zgemm(transA,transB,nc,nc,nc,a1,fA,lda,U,lda,b1,A,lda) 
+
+!     fA=U*A
+      a1 = complex(1.,0.)
+      b1 = complex(0.,0.)
+      transA = 'N'
+      transB = 'N'
+      call zgemm(transA,transB,nc,nc,nc,a1,U,lda,A,lda,b1,fA,lda)
+
+
+      return
+      end subroutine MAT_ZFCN_LN
+!----------------------------------------------------------------------
+      subroutine MAT_LN_PADE(fT,T,lda,nc,pmo)
+
+!     T - Triangular Matrix after Schur decomposition
+!     fT = f(T)            
+
+!     T  = (I+X)
+!                         m            
+!     Log(I+X) = r_{m} = Sum    w_{i}*X
+!                        i=1  --------------
+!                             I + x_{i}*X
+
+!     w_{i} - Weights of m point Gauss-Legendre Quadrature
+!     x_{i}  - Nodes of m point Gauss-Legendre Quadrature in [0,1]            
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'MFN.inc'
+
+      integer lda       ! leading dimension of T
+      integer nc        ! No of columns (and rows considered)
+
+      integer pmo       ! order of Pade approximant
+
+      complex T(lda,nc)
+      complex fT(lda,nc) ! f(T). Assuming same shape as T
 
       complex eye(mfnkryl1,mfnkryl1)
       complex X(mfnkryl1,mfnkryl1)
@@ -353,8 +447,6 @@
       complex WK2(mfnkryl1,mfnkryl1)
 
       integer nt
-
-      character fcn*4
 
 !     GL weights and nodes
       real wj(mfnkryl1)           ! just taking a high enough number
@@ -388,25 +480,16 @@
         eye(i,i)=complex(1.0,0)
       enddo 
 
-!     Complex Schur Decomposition (Double-Precision)
-      ldu=lda 
-      call wrp_zschur(A,lda,nc,U,ldu,w)
-!     A now contains the Complex Upper-Triangular Matrix
-!     U has the Schur vectors
-
-!     Debugging
-!      call write_zmat(A,lda,nc,nc,'PdT')
-
       nt = mfnkryl1*mfnkryl1
       call nek_zzero(X,nt)
       do i=1,nc
       do j=1,nc
-        X(i,j)=A(i,j)-eye(i,j)
+        X(i,j)=T(i,j)-eye(i,j)
       enddo        
       enddo 
 
 !     Evaluate Pade Approximant 
-      call nek_zzero(fA,lda*nc)
+      call nek_zzero(fT,lda*nc)
       call nek_zzero(WK1,nt)
       call nek_zzero(WK2,nt)
       do i=1,pmo
@@ -414,45 +497,59 @@
         call nek_zrcmult(WK2,xj(i),nt)
         call nek_zadd2(WK2,eye,nt)
 
-!       Matrix inversion 
+!       Matrix inversion of a Triangular Matrix 
         call ztrtri('U','N',nc,WK2,mfnkryl1,info)
         if (info.ne.0) then
-          write(6,*) 'Matrix inversion unsuccesfull in MAT_FCN_LN'
+          write(6,*) 'Matrix inversion unsuccesfull in MAT_LN_PADE'
           call exitt
         endif
 
         call nek_zcopy(WK1,X,nt)
         call nek_zrcmult(WK1,wj(i),nt)
 
-!       fA= fA + WK2*WK1
+!       fT= fT + WK2*WK1
         a1 = complex(1.,0.)
         b1 = complex(1.,0.)
         transA = 'N'
         transB = 'N'
         call zgemm(transA,transB,nc,nc,nc,a1,WK2,mfnkryl1,
-     $             WK1,mfnkryl1,b1,fA,lda) 
+     $             WK1,mfnkryl1,b1,fT,lda) 
 
       enddo       
 
-!     A=fA*U^{H}
-      a1 = complex(1.,0.)
-      b1 = complex(0.,0.)
-      transA = 'N'
-      transB = 'C'
-      call zgemm(transA,transB,nc,nc,nc,a1,fA,lda,U,lda,b1,A,lda) 
+      return            
+      end subroutine MAT_LN_PADE            
 
-!     fA=U*A
-      a1 = complex(1.,0.)
-      b1 = complex(0.,0.)
-      transA = 'N'
-      transB = 'N'
-      call zgemm(transA,transB,nc,nc,nc,a1,U,lda,A,lda,b1,fA,lda) 
-
-
-      return
-      end subroutine MAT_ZFCN_LN
 !====================================================================== 
 !----------------------------------------------------------------------
+      subroutine write_zmat(A,n,r,c,nam)
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+
+      integer n,r,c
+      complex A(n,c)
+      character outfmt*38
+      character nam*3
+
+      integer i,j
+
+      call blank(outfmt,38)
+      write(outfmt,'(A7,I3.3,A27)') '(A3,1x,',c,
+     $                '(E12.4E2,1x,E12.4E2,A1,1x))'
+
+      if (nid.eq.0) then
+        do i=1,r
+          write(6,outfmt) nam, (real(A(i,j)),imag(A(i,j)),'i',j=1,c)
+        enddo
+      endif
+
+      return
+      end subroutine write_zmat
+
+c-----------------------------------------------------------------------
 
 
 

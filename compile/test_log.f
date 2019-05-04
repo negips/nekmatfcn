@@ -23,30 +23,14 @@ c-----------------------------------------------------------------------
       include 'NEKUSE'
       include 'RTFILTER'
 
-!     Just need the pointer from SOLN      
-      integer jp
-      common /ppointr/ jp
-
       integer ix,iy,iz,ieg,iel
-
-!     Reshaped array for convenience      
-      real optfx(lx1,ly1,lz1,lelt,2)
-      real optfy(lx1,ly1,lz1,lelt,2)
-      real optfz(lx1,ly1,lz1,lelt,2)
-      common /optfxyz/ optfx,optfy,optfz
-     
+      
       iel=gllel(ieg)
 
       ffx = 0.
       ffy = 0.
       ffz = 0.
 
-      if ((jp.gt.0).and.(jp.le.2)) then
-        ffx = optfx(ix,iy,iz,iel,jp)
-        ffy = optfy(ix,iy,iz,iel,jp)
-        if (ndim.eq.3) ffz = optfz(ix,iy,iz,iel,jp)
-      endif        
-            
       return
       end
 c-----------------------------------------------------------------------
@@ -184,7 +168,6 @@ c-----------------------------------------------------------------------
       INCLUDE 'TSTEP'
       INCLUDE 'INPUT_DEF'
       INCLUDE 'INPUT'
-      INCLUDE 'MATFCN'
 
       integer lt,lt2
       parameter (lt=lx1*ly1*lz1*lelv)
@@ -193,29 +176,62 @@ c-----------------------------------------------------------------------
       real vort,w1,w2
       common /scrns/ vort(lt,3), w1(lt), w2(lt)
 
-      real optfx(lt,2),optfy(lt,2),optfz(lt,2)
-      common /optfxyz/ optfx,optfy,optfz
+      integer n,m
+      parameter (n=10)
+      real matA(n,n),matV(n,n)
 
-      real Omega
+      complex cA(n,n),cV(n,n),cB(n,n)
+      integer pord                          ! Pade Order
+
+      integer seed
+
+      integer i,j
+      logical ifinv
+      real rr,ri
 
 
+      m=5
 
-      if (ifmatf) then
-        Omega = 0.5
-        call opcopy(optfx(1,1),optfy(1,1),optfz(1,1),
-     $                  vxp(1,2),vyp(1,2),vzp(1,2))
-        call opcmult(optfx(1,1),optfy(1,1),optfz(1,1),Omega)
+      if (istep.eq.0) then
 
-        call opcopy(optfx(1,2),optfy(1,2),optfz(1,2),
-     $                  vxp(1,1),vyp(1,1),vzp(1,1))
-        call opcmult(optfx(1,1),optfy(1,1),optfz(1,1),-Omega)
-      else
-        call opzero(optfx(1,1),optfy(1,1),optfz(1,1))
-        call opzero(optfx(1,2),optfy(1,2),optfz(1,2))
-      endif        
+        call rzero(matA,m)
+        seed = 86458
+        call srand(seed)
+
+        call nek_zzero(cA,n*n)
+        call nek_zzero(cB,n*n)
+
+        do i=1,m
+        do j=1,m
+          rr = rand()
+          ri = rand()
+          cA(i,j)   = complex(rr,ri)
+          cB(i,j)   = complex(rr,ri)
+        enddo
+        enddo
+
+        write(6,*) ' '
+        call write_zmat(cA,n,m,m,'Ain')
+
+        ifinv = .false.
+        call MAT_ZFCN(cV,cA,n,m,'loge',ifinv)
+
+        call write_zmat(cV,n,m,m,'fAo')
+
+        pord = 16
+        ifinv = .false.
+        call MAT_ZFCN_LN(cV,cB,n,m,pord,ifinv) 
+        call write_zmat(cV,n,m,m,'Pde')
+      
+
+      endif
+
+      call exitt
+
 
       return
       end
+c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 
 c
