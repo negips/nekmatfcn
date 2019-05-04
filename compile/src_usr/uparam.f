@@ -125,6 +125,11 @@
 !     PSN ARPACK
 !      call psn_arnoldi_param_in(iunit)
 
+      if (nid.eq.0) rewind(iunit)
+!     MATFCN
+      call matf_param_in(iunit)
+
+
       return
       end
 !***********************************************************************
@@ -178,7 +183,11 @@
 
 !     PSN ARPACK
 !      call psn_arnoldi_param_out(iunit)
-     
+
+!     MATFCN
+      call matf_param_out(iunit)
+
+
       return
       end
 !***********************************************************************

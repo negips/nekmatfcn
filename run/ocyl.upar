@@ -85,7 +85,14 @@
  NLFSI_RST_FLI      =0,
  NLFSI_IFTERMSO     =T,
  /
-
+&MATFCN
+ IFMATF     =T,
+ MATF_IFPR  =T,
+ MATF_UZAWA =F,
+ NGS        =1,         ! Should be positive
+ NORTHO     =90,        ! Should be negative
+ SSTEP      =10,
+/
 
 
 

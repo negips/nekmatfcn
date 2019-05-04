@@ -25,6 +25,9 @@
       complex fA(lda,nc) ! f(A). Assuming same shape as A.
       complex w(nc)
 
+      integer m,n,k
+      integer ldb,ldc
+
       character fcn*4
 
       logical ifinv
@@ -58,22 +61,30 @@
         endif
 !       fA now contains the inverse
       endif
-     
 
 !     A=fA*U^{H}
       alpha = complex(1.0,0)
       beta  = complex(0.,0.)
       transA = 'N'
       transB = 'C'
-      call zgemm(transA,transB,nc,nc,nc,alpha,fA,lda,U,lda,beta,A,lda) 
+      m=nc
+      n=nc
+      k=nc
+      ldb=lda
+      ldc=lda
+      call zgemm(transA,transB,m,n,k,alpha,fA,lda,U,ldb,beta,A,ldc) 
 
 !     fA=U*A
       alpha = complex(1.0,0)
       beta  = complex(0.,0.)
       transA = 'N'
       transB = 'N'
-      call zgemm(transA,transB,nc,nc,nc,alpha,U,lda,A,lda,beta,fA,lda) 
-
+      m=nc
+      n=nc
+      k=nc
+      ldb=lda
+      ldc=lda
+      call zgemm(transA,transB,m,n,k,alpha,U,lda,A,ldb,beta,fA,ldc) 
 
       return
       end subroutine MAT_ZFCN

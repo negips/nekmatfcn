@@ -201,14 +201,14 @@ c-----------------------------------------------------------------------
 
       real Omega
 
-!     Hard-coding parameters for now
-      ifmatf = .true.
-      matf_ifpr = .true.
-      matf_uzawa = .false.
-       
-      ngs=1        ! no of Gram-Schmidt Orthogonalizations
-      northo=90    ! no of Krylov vectors to save
-      sstep=1      ! no of iterations between Re-Ortho
+!!     Hard-coding parameters for now
+!      ifmatf = .true.
+!      matf_ifpr = .true.
+!      matf_uzawa = .false.
+!       
+!      ngs=1        ! no of Gram-Schmidt Orthogonalizations
+!      northo=90    ! no of Krylov vectors to save
+!      sstep=100    ! no of iterations between Re-Ortho
 
       call opzero(wx,wy,wz)
 

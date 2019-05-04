@@ -5,6 +5,80 @@
 !
 !======================================================================       
 !----------------------------------------------------------------------
+!---------------------------------------------------------------------- 
+!     read parameters MATRIX FUNCTIONS 
+      subroutine matf_param_in(fid)
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'            !
+      include 'PARALLEL_DEF' 
+      include 'PARALLEL'        ! ISIZE, WDSIZE, LSIZE,CSIZE
+      include 'MATFCN'
+
+!     argument list
+      integer fid               ! file id
+
+!     local variables
+      integer ierr
+
+!     namelists
+      namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep 
+!     default values
+      ifmatf         = .FALSE.        ! if perform Matrix functions
+      matf_uzawa     = .FALSE.        ! uzawa at the first time step?
+      matf_ifpr      = .TRUE.         ! if include pressure in
+                                      ! arnoldi vector
+      northo         = mfnkryl        ! no of vectors to save
+      ngs            = 1              ! no of Gram-Schmidt passes
+      sstep          = 100            ! No of steps between
+                                      ! successive orthogonalization
+                                         
+!     read the file
+      ierr=0
+      if (NID.eq.0) then
+         read(unit=fid,nml=MATFCN,iostat=ierr)
+      endif
+      call err_chk(ierr,'Error reading MATFCN parameters.$')
+
+!     broadcast data
+      call bcast(ifmatf       , LSIZE)
+      call bcast(matf_uzawa   , LSIZE)
+      call bcast(matf_ifpr    , LSIZE)
+      call bcast(northo       , ISIZE)
+      call bcast(ngs          , ISIZE)
+      call bcast(sstep        , ISIZE)
+
+      return
+      end subroutine matf_param_in
+!----------------------------------------------------------------------
+!     write parameters fluid-structure interaction
+      subroutine matf_param_out(fid)
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'            !
+      include 'MATFCN'
+
+!     argument list
+      integer fid               ! file id
+
+!     local variables
+      integer ierr
+
+!     namelists
+      namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep 
+
+!     read the file
+      ierr=0
+      if (NID.eq.0) then
+         write(unit=fid,nml=MATFCN,iostat=ierr)
+      endif
+      call err_chk(ierr,'Error writing MATFCN parameters.$')
+
+      return
+      end subroutine matf_param_out
+c-----------------------------------------------------------------------
 
       subroutine MATF_MAIN
 
@@ -30,6 +104,7 @@
       integer i,j,igs
       complex hj(mfnkryl1)
       complex gj(mfnkryl1)
+      complex wkh(mfnkryl1)
 
 !     ZGEMV parameters
       character trans*1
@@ -86,6 +161,8 @@
         incy = 1
         call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_AxW1,
      $                  incx,beta,gj,incy)
+!       Sum over processors
+        call gop(gj,wkh,'+  ',2*nkryl)
 
 !       Ax = Ax - Q*gj
         alpha = complex(-1.0,0)
@@ -100,22 +177,16 @@
      $                  incx,beta,MATF_Ax,incy)
 
         call nek_zadd2(hj,gj,nkryl)
-
       enddo
-
-      call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
-      call nek_zrcol2(MATF_AxW1,MATF_ArWt,vlen)
      
-!     beta = congj(Ax)*ArWt*Ax
-      n=vlen
-      incx = 1
-      incy = 1
-      beta = zdotc(n,MATF_Ax,incx,MATF_AxW1,incy)
+!     Update Hessenberg
+!     beta = sqrt(congj(Ax)*ArWt*Ax)
+      call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
+      beta = MATF_INPROD(MATF_AxW1,MATF_Ax,MATF_ArWt,vlen)
       beta = sqrt(beta)
       hj(nkryl+1)=beta
-!     Update Hessenberg
       call nek_zcopy(MATF_HS(1,nkryl),hj,nkryl+1)
-
+     
 !     Normalize vector 
       call nek_zcmult(MATF_Ax,1./beta,vlen)
 
@@ -177,7 +248,9 @@
         call nek_zsub2(MATF_Axn,MATF_AxW1,vlen)
       endif
 
-      nkryl=nkryl+1 
+      nkryl=nkryl+1
+
+      call MATF_QORTHO_CHK 
 
       call MATF_RESTART      
 
@@ -208,7 +281,7 @@
       integer incx      ! memory skip for x
       integer incy      ! memory skip for y
 
-      complex zdotc     ! BLAS function
+      complex MATF_INPROD     ! BLAS function
 
 
       ntot2=nx2*ny2*nz2*nelv
@@ -240,15 +313,17 @@
       n=vlen
       incx = 1
       incy = 1
-      beta = zdotc(n,MATF_Ax,incx,MATF_AxW1,incy)   ! BLAS function
+      call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
+      beta = MATF_INPROD(MATF_AxW1,MATF_Ax,MATF_ArWt,vlen)
       beta = sqrt(beta)
+
       call nek_zcmult(MATF_Ax,1./beta,vlen)     ! normalize
 
       if (nio.eq.0) write(6,*) 'Initial Norm=',abs(beta)
 
 !     Add starting vector to Krylov space
       call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
-      nkryl = 1
+      nkryl = 0   ! skip the first arbitrary initial condition
 
 !     Restart stepper
       call MATF_RESTART
@@ -374,6 +449,9 @@
       include 'NLFSI'
       include 'MATFCN'
 
+      include 'MASS_DEF'
+      include 'MASS'
+
       integer i,ntot,ntotp
       
       ntot=nx1*ny1*nz1*nelv
@@ -403,7 +481,8 @@
       else
         call rzero(prp(1,1),ntotp)  ! real
         call rzero(prp(1,2),ntotp)  ! imaginary
-      endif  
+      endif
+
 
       return
       end subroutine MATF_SETFLDS
@@ -524,6 +603,7 @@
 !     set vxp,psi etc from Ax      
       call MATF_SETFLDS
 
+
       IFUZAWA = MATF_UZAWA
 
       return
@@ -540,6 +620,7 @@
 
       integer incx,incy
       complex beta
+      complex wk
 
       call nek_zrcol2(x,wt,n)
 
@@ -547,11 +628,54 @@
       incx = 1
       incy = 1
       beta = zdotc(n,x,incx,y,incy)
+!     Sum over processors
+      call gop(beta,wk,'+  ',2)
 
       MATF_INPROD = beta
 
       end function MATF_INPROD            
 !---------------------------------------------------------------------- 
+
+      subroutine MATF_QORTHO_CHK
+
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'MATFCN'
+
+      complex matf_inprod
+      complex beta
+
+      integer i,j
+
+      if (nkryl.gt.5) return
+
+      if (nid.eq.0) then
+        write(6,*) 'MATF_Q: Orthogonality Check'
+      endif
+
+      call nek_zzero(MATF_HWK,mfnkryl1,nkryl) 
+
+!     qq = Q^{H}*Q
+      do i=1,nkryl
+        do j=1,nkryl
+          call nek_zcopy(MATF_AxW1,MATF_Q(1,i),vlen)
+          MATF_HWK(i,j) = MATF_INPROD(MATF_AxW1,MATF_Q(1,j),
+     $                        MATF_ArWt,vlen)
+        enddo          
+      enddo
+
+      if (nid.eq.0) then      
+        call write_zmat(MATF_HWK,mfnkryl1,nkryl,nkryl,'QHQ')
+      endif        
+
+
+      return
+      end subroutine MATF_QORTHO_CHK
+!---------------------------------------------------------------------- 
+
 
 
 
