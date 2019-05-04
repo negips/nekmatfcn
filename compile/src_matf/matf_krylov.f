@@ -23,7 +23,8 @@
       integer ierr
 
 !     namelists
-      namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep 
+      namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep,
+     $                  matf_omega 
 !     default values
       ifmatf         = .FALSE.        ! if perform Matrix functions
       matf_uzawa     = .FALSE.        ! uzawa at the first time step?
@@ -33,6 +34,7 @@
       ngs            = 1              ! no of Gram-Schmidt passes
       sstep          = 100            ! No of steps between
                                       ! successive orthogonalization
+      matf_omega     = 1.0            ! Angular frequency of forcing
                                          
 !     read the file
       ierr=0
@@ -48,6 +50,7 @@
       call bcast(northo       , ISIZE)
       call bcast(ngs          , ISIZE)
       call bcast(sstep        , ISIZE)
+      call bcast(matf_omega   ,WDSIZE)
 
       return
       end subroutine matf_param_in
@@ -67,7 +70,8 @@
       integer ierr
 
 !     namelists
-      namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep 
+      namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep, 
+     $                  matf_omega
 
 !     read the file
       ierr=0
@@ -121,6 +125,7 @@ c-----------------------------------------------------------------------
       integer nc
       character fcn*4
       logical ifinv
+      integer pmo       ! Pade approximant order
 
       complex MATF_INPROD
 
@@ -203,7 +208,9 @@ c-----------------------------------------------------------------------
       nc  = nkryl
       fcn = 'loge'
       ifinv = .true.
-      call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
+      pmo = 10
+      call MAT_ZFCN_LN(MATF_HINV,MATF_HWK,lda,nc,pmo,ifinv)
+!      call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
 
 !     Approximate solution
 !     x_k = ||f||*Q_k*f(H_k)^{-1}*e1
@@ -252,7 +259,10 @@ c-----------------------------------------------------------------------
 
       call MATF_QORTHO_CHK 
 
-      call MATF_RESTART      
+      call MATF_RESTART
+
+!     For now      
+      if (nkryl.eq.mfnkryl1) call exitt
 
       return
       end subroutine MATF_MAIN

@@ -209,30 +209,38 @@ c-----------------------------------------------------------------------
 !      ngs=1        ! no of Gram-Schmidt Orthogonalizations
 !      northo=90    ! no of Krylov vectors to save
 !      sstep=100    ! no of iterations between Re-Ortho
+!      Omega = 0.5  ! Angular frequency of Forcing
 
       call opzero(wx,wy,wz)
 
       if (ifmatf) then
         call MATF_MAIN
 
-        Omega = 0.5
-        call opcopy(optfx(1,1),optfy(1,1),optfz(1,1),
-     $                  vxp(1,2),vyp(1,2),vzp(1,2))
-        call opcmult(optfx(1,1),optfy(1,1),optfz(1,1),Omega)
-
-        call opcopy(optfx(1,2),optfy(1,2),optfz(1,2),
-     $                  vxp(1,1),vyp(1,1),vzp(1,1))
-        call opcmult(optfx(1,2),optfy(1,2),optfz(1,2),-Omega)
       else
-        call opzero(optfx(1,1),optfy(1,1),optfz(1,1))
-        call opzero(optfx(1,2),optfy(1,2),optfz(1,2))
+        if (mod(istep,sstep).eq.0) then
+          time=0.
+          istep=0
+        endif
       endif
+
+      call opcopy(optfx(1,1),optfy(1,1),optfz(1,1),
+     $                vxp(1,2),vyp(1,2),vzp(1,2))
+      call opcmult(optfx(1,1),optfy(1,1),optfz(1,1),matf_omega)
+
+      call opcopy(optfx(1,2),optfy(1,2),optfz(1,2),
+     $                vxp(1,1),vyp(1,1),vzp(1,1))
+      call opcmult(optfx(1,2),optfy(1,2),optfz(1,2),-matf_omega)
+
 
       if (istep.eq.0) then
         call outpost(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),
      $      tp(1,1,1),'pr1') 
         call outpost(vxp(1,2),vyp(1,2),vzp(1,2),prp(1,2),
      $      tp(1,1,2),'pr2')
+
+        call outpost(optfx(1,1),optfy(1,1),optfz(1,1),prp(1,1),
+     $      tp(1,1,1),'pf1') 
+
       endif        
 
       return

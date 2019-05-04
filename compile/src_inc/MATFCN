@@ -36,11 +36,11 @@
 
       common /MATFrv/ MATF_ArWt,MATF_MSK
 
-      integer ngs       ! no of Gram-Schmidt Orthogonalizations
-      integer northo    ! no of Krylov vectors to save
-      integer nkryl     ! current size of krylov space
-      integer vlen      ! length of krylov vector
-      integer sstep     ! no of iterations between Re-Ortho
+      integer ngs        ! no of Gram-Schmidt Orthogonalizations
+      integer northo     ! no of Krylov vectors to save
+      integer nkryl      ! current size of krylov space
+      integer vlen       ! length of krylov vector
+      integer sstep      ! no of iterations between Re-Ortho
 
       common /MATFi/ ngs,nkryl,northo,vlen,sstep
 
@@ -49,6 +49,10 @@
       logical MATF_UZAWA      ! If use Uzawa for first time step
 
       common /MATFl/ MATF_UZAWA,IFMATF,MATF_IFPR
+
+      real matf_omega         ! Forcing angular frequency
+
+      common /MATFr/ matf_omega
 
 
 
