@@ -42,6 +42,12 @@
 
       complex zdotc     ! BLAS function 
 
+!     Matrix function evaluation      
+      integer nc
+      character fcn*4
+      logical ifinv
+
+      complex MATF_INPROD
 
       if (mod(istep,sstep).ne.0) then
         return
@@ -108,7 +114,7 @@
       beta = sqrt(beta)
       hj(nkryl+1)=beta
 !     Update Hessenberg
-      call nek_zcopy(MATF_HS(1,nkryl+1),hj,nkryl+1)
+      call nek_zcopy(MATF_HS(1,nkryl),hj,nkryl+1)
 
 !     Normalize vector 
       call nek_zcmult(MATF_Ax,1./beta,vlen)
@@ -117,9 +123,63 @@
       call nek_zcopy(MATF_Q(1,nkryl+1),MATF_Ax,vlen)
 
 !     Do something to check residual
+!     Estimate solution
+      call nek_zcopy(MATF_HWK,MATF_HS,mfnkryl1*nkryl)
+
+!     Evaluate approximate matrix function inverse
+!     Using Simplified Schur-Parlett method for now      
+      lda = mfnkryl1
+      nc  = nkryl
+      fcn = 'loge'
+      ifinv = .true.
+      call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
+
+!     Approximate solution
+!     x_k = ||f||*Q_k*f(H_k)^{-1}*e1
+      alpha = complex(1.0,0)
+      beta  = complex(0.,0.)
+      trans = 'N'
+      lda=qlen0
+      m=vlen
+      n=nkryl
+      incx = 1
+      incy = 1
+      call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HINV,
+     $                incx,beta,MATF_AxW1,incy)
+
+      call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
+
+      if (nkryl.gt.1) then
+
+!       Difference between consecutive estimates      
+        call nek_zsub2(MATF_AxW1,MATF_Axn,vlen)
+
+!       Store approximate solution      
+        call nek_zsub2(MATF_Axn,MATF_AxW2,vlen)
+
+        call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
+
+!       Find norm of difference      
+        beta = MATF_INPROD(MATF_AxW2,MATF_AxW1,MATF_ArWt,vlen)
+        beta = sqrt(beta)
+
+        if (nid.eq.0) then
+          write(6,303) 'Residual Norm:', abs(beta)
+        endif
+ 303    format(A14,1x,E25.16E3)
+
+!       Just exit for now      
+        if (abs(beta).lt.1.0e-6) then
+          call exitt
+        endif
+      else
+!       Store approximate solution      
+        call nek_zsub2(MATF_Axn,MATF_AxW1,vlen)
+      endif
+
+      nkryl=nkryl+1 
 
       call MATF_RESTART      
-
 
       return
       end subroutine MATF_MAIN
@@ -136,6 +196,9 @@
       include 'SIZE'
       include 'MATFCN'
 
+      include 'SOLN_DEF'
+      include 'SOLN'
+
       integer i
 
       integer ntot2
@@ -145,7 +208,7 @@
       integer incx      ! memory skip for x
       integer incy      ! memory skip for y
 
-      complex zdotc     ! BLAS function 
+      complex zdotc     ! BLAS function
 
 
       ntot2=nx2*ny2*nz2*nelv
@@ -181,11 +244,11 @@
       beta = sqrt(beta)
       call nek_zcmult(MATF_Ax,1./beta,vlen)     ! normalize
 
-      if (nio.eq.0) write(6,*) 'Initial Norm=',beta
+      if (nio.eq.0) write(6,*) 'Initial Norm=',abs(beta)
 
 !     Add starting vector to Krylov space
       call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
-      nkryl = 1       ! we don't want to pick the random initial condition
+      nkryl = 1
 
 !     Restart stepper
       call MATF_RESTART
@@ -467,9 +530,28 @@
       end subroutine MATF_RESTART
 !---------------------------------------------------------------------- 
 
+      complex function MATF_INPROD(x,y,wt,n)
 
+      integer n
 
+      complex x(n)
+      complex y(n)
+      real wt(n)
 
+      integer incx,incy
+      complex beta
+
+      call nek_zrcol2(x,wt,n)
+
+!     beta = congj(Ax)*ArWt*Ax
+      incx = 1
+      incy = 1
+      beta = zdotc(n,x,incx,y,incy)
+
+      MATF_INPROD = beta
+
+      end function MATF_INPROD            
+!---------------------------------------------------------------------- 
 
 
 

@@ -12,27 +12,27 @@
    1.00000     p008 CONDUCT
    0.00000     p009 
    0.00000     p010 FINTIME
-   0.00000E+00 p011 NSTEPS
+   1.00000E+06 p011 NSTEPS
   -2.50000E-03 p012 DT
    0.00000     p013 IOCOMM
    0.00000     p014 IOTIME
-   1.00000E+01 p015 IOSTEP
+   1.00000E+03 p015 IOSTEP
    0.00000     p016 PSSOLVER: 0=default
    0.00000     p017 
    0.00000     p018 GRID < 0 --> # cells on screen
    0.00000     p019 INTYPE
    0.00000     p020 NORDER
-   1.00000E-10 p021 DIVERGENCE
-   1.00000E-10 p022 HELMHOLTZ
+   1.00000E-07 p021 DIVERGENCE
+   1.00000E-07 p022 HELMHOLTZ
    0.00000     p023 NPSCAL
    1.00000E-10 p024 TOLREL
    1.00000E-05 p025 TOLABS
    1.00000     p026 COURANT/NTAU
-   2.00000     p027 TORDER
+   3.00000     p027 TORDER
    0.00000     p028 TORDER: mesh velocity (0: p28=p27)
    0.00000     p029 = magnetic visc if > 0, = -1/Rm if < 0
    0.00000     p030 > 0 ==> properties set in uservp()
-   0.00000     p031 NPERT: #perturbation modes
+  -2.00000     p031 NPERT: #perturbation modes
    0.00000     p032 #BCs in re2 file, if > 0
    0.00000     p033 
    0.00000     p034 
@@ -16216,7 +16216,8 @@
  E   22843   1059.00       4.00000       0.00000       0.00000       1.00000    
  E   22844   2218.00       1.00000       0.00000       0.00000       0.00000    
   ***** NO THERMAL BOUNDARY CONDITIONS *****
-           0  PRESOLVE/RESTART OPTIONS  *****
+           1  PRESOLVE/RESTART OPTIONS  *****
+ocyl.IC XUP
            7          INITIAL CONDITIONS *****
 C Default                                                                       
 C Default                                                                       

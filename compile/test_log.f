@@ -213,13 +213,12 @@ c-----------------------------------------------------------------------
         write(6,*) ' '
         call write_zmat(cA,n,m,m,'Ain')
 
-        ifinv = .false.
+        ifinv = .true.
         call MAT_ZFCN(cV,cA,n,m,'loge',ifinv)
 
         call write_zmat(cV,n,m,m,'fAo')
 
         pord = 16
-        ifinv = .false.
         call MAT_ZFCN_LN(cV,cB,n,m,pord,ifinv) 
         call write_zmat(cV,n,m,m,'Pde')
       

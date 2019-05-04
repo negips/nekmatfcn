@@ -22,12 +22,14 @@
       complex MATF_Q(qlen0,mfnkryl1)      ! Orthogonal Matrix
       complex MATF_HS(mfnkryl1,mfnkryl)   ! Hessenberg Matrix
       complex MATF_HINV(mfnkryl1,mfnkryl) ! Inverse Hessenberg Matrix
+      complex MATF_HWK(mfnkryl1,mfnkryl)  ! Work array for Hessenberg Matrix
 
       complex MATF_Ax(qlen0)              ! Single vector
-      complex MATF_AxW1(qlen0)             ! Work array
+      complex MATF_Axn(qlen0)             ! Previous iteration solution
+      complex MATF_AxW1(qlen0)            ! Work array
       complex MATF_AxW2(qlen0)            ! Work array
 
-      common /MATFzv/ MATF_Q,MATF_HS,MATF_Ax
+      common /MATFzv/ MATF_Q,MATF_HS,MATF_Ax,MATF_Axn
 
       real MATF_ArWt(qlen0)               ! Arnoldi Weights
       real MATF_MSK(qlen0)                ! Arnoldi Mask

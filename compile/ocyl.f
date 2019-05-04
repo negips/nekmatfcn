@@ -85,9 +85,9 @@ c-----------------------------------------------------------------------
           uz = 0.
         endif  
       elseif (cbu.eq.'mv ') then
-        ux = umeshx(ix,iy,iz,iel)
-        uy = umeshy(ix,iy,iz,iel)
-        if (ndim.eq.3) uz = umeshz(ix,iy,iz,iel)
+        ux = 0. ! umeshx(ix,iy,iz,iel)
+        uy = 0. ! umeshy(ix,iy,iz,iel)
+        if (ndim.eq.3) uz = 0. ! umeshz(ix,iy,iz,iel)
 
       endif  
 
@@ -106,6 +106,7 @@ c-----------------------------------------------------------------------
       include 'NEKUSE'
       include 'INPUT_DEF'
       include 'INPUT'
+      include 'USERPAR'
 
       integer ix,iy,iz,ieg
       real amp, ran
@@ -113,7 +114,7 @@ c-----------------------------------------------------------------------
 c     velocity
 c     random distribution
 
-      amp = param(110)
+      amp = UPRM_DAMPL
 
       ran = 3.e4*(ieg+x*sin(y)) - 1.5e3*ix*iy + .5e5*ix
       ran = 1.e3*sin(ran)
@@ -184,6 +185,8 @@ c-----------------------------------------------------------------------
       INCLUDE 'TSTEP'
       INCLUDE 'INPUT_DEF'
       INCLUDE 'INPUT'
+      INCLUDE 'MVGEOM_DEF'
+      INCLUDE 'MVGEOM'
       INCLUDE 'MATFCN'
 
       integer lt,lt2
@@ -198,9 +201,20 @@ c-----------------------------------------------------------------------
 
       real Omega
 
+!     Hard-coding parameters for now
+      ifmatf = .true.
+      matf_ifpr = .true.
+      matf_uzawa = .false.
+       
+      ngs=1        ! no of Gram-Schmidt Orthogonalizations
+      northo=90    ! no of Krylov vectors to save
+      sstep=1      ! no of iterations between Re-Ortho
 
+      call opzero(wx,wy,wz)
 
       if (ifmatf) then
+        call MATF_MAIN
+
         Omega = 0.5
         call opcopy(optfx(1,1),optfy(1,1),optfz(1,1),
      $                  vxp(1,2),vyp(1,2),vzp(1,2))
@@ -208,10 +222,17 @@ c-----------------------------------------------------------------------
 
         call opcopy(optfx(1,2),optfy(1,2),optfz(1,2),
      $                  vxp(1,1),vyp(1,1),vzp(1,1))
-        call opcmult(optfx(1,1),optfy(1,1),optfz(1,1),-Omega)
+        call opcmult(optfx(1,2),optfy(1,2),optfz(1,2),-Omega)
       else
         call opzero(optfx(1,1),optfy(1,1),optfz(1,1))
         call opzero(optfx(1,2),optfy(1,2),optfz(1,2))
+      endif
+
+      if (istep.eq.0) then
+        call outpost(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),
+     $      tp(1,1,1),'pr1') 
+        call outpost(vxp(1,2),vyp(1,2),vzp(1,2),prp(1,2),
+     $      tp(1,1,2),'pr2')
       endif        
 
       return
