@@ -474,6 +474,7 @@ c-----------------------------------------------------------------------
       call nek_z2ri(vyp(1,1),vyp(1,2),MATF_Ax(i),ntot)
       call col2(vyp(1,1),MATF_MSK(i),ntot)      ! real
       call col2(vyp(1,2),MATF_MSK(i),ntot)      ! imaginary
+
       i=i+ntot
       if (if3d) then
         call nek_z2ri(vzp(1,1),vzp(1,2),MATF_Ax(i),ntot)           
@@ -484,9 +485,9 @@ c-----------------------------------------------------------------------
 
       ntotp=nx2*ny2*nz2*nelv
       if (matf_ifpr) then
-        call nek_z2ri(prp(1,1),prp(1,2),MATF_Ax(i),ntot)           
-        call col2(prp(1,1),MATF_MSK(i),ntot)    ! real
-        call col2(prp(1,2),MATF_MSK(i),ntot)    ! imaginary
+        call nek_z2ri(prp(1,1),prp(1,2),MATF_Ax(i),ntotp)           
+        call col2(prp(1,1),MATF_MSK(i),ntotp)    ! real
+        call col2(prp(1,2),MATF_MSK(i),ntotp)    ! imaginary
         i=i+ntotp
       else
         call rzero(prp(1,1),ntotp)  ! real

@@ -86,13 +86,13 @@
  NLFSI_IFTERMSO     =T,
  /
 &MATFCN
- IFMATF     =F,
+ IFMATF     =T,
  MATF_IFPR  =T,
  MATF_UZAWA =F,
  NGS        =1, 
  NORTHO     =90,
  SSTEP      =10,
- matf_omega =0.5,
+ matf_omega =0.05,
 /
 
 
