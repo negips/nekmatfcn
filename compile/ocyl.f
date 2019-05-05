@@ -110,24 +110,42 @@ c-----------------------------------------------------------------------
 
       integer ix,iy,iz,ieg
       real amp, ran
+      real a1,b1,c1
+
+!     Just need the pointer from SOLN      
+      integer jp
+      common /ppointr/ jp
 
 c     velocity
 c     random distribution
 
       amp = UPRM_DAMPL
 
-      ran = 3.e4*(ieg+x*sin(y)) - 1.5e3*ix*iy + .5e5*ix
-      ran = 1.e3*sin(ran)
-      ran = 1.e3*sin(ran)
-      ran = cos(ran)
-      ux  = ran*amp
+!      a1=rand()
+      if (jp.eq.1) then
+        a1=3.4
+        b1=2.0
+        c1=0.11
+      elseif (jp.eq.2) then
+        a1=1.1
+        b1=0.2
+        c1=5.11
+      endif        
 
-      ran = 2.3e4*(ieg+x*sin(y)) + 2.3e3*ix*iy - 2.e5*ix
-      ran = 1.e3*sin(ran)
-      ran = 1.e3*sin(ran)
-      ran = cos(ran)
-      uy  = ran*amp
+!      ran = a1*(ieg+x*sin(y)) - 1.5e3*ix*iy + .5e5*ix
+!      ran = b1*sin(ran)
+!      ran = c1*sin(ran)
+!      ran = cos(ran)
+!      ux  = ran*amp
+!
+!      ran = a1*(ieg+x*sin(y)) + 2.3e3*ix*iy - 2.e5*ix
+!      ran = b1*sin(ran)
+!      ran = c1*sin(ran)
+!      ran = cos(ran)
+!      uy  = ran*amp
 
+      ux = rand()
+      uy = rand()
       uz = 0.0
 
 
@@ -213,9 +231,19 @@ c-----------------------------------------------------------------------
 
       call opzero(wx,wy,wz)
 
+!      if (istep.eq.0) then
+!        call outpost(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),
+!     $      tp(1,1,1),'pr1') 
+!        call outpost(vxp(1,2),vyp(1,2),vzp(1,2),prp(1,2),
+!     $      tp(1,1,2),'pr2')
+!
+!        call outpost(optfx(1,1),optfy(1,1),optfz(1,1),prp(1,1),
+!     $      tp(1,1,1),'pf1') 
+!
+!      endif        
+
       if (ifmatf) then
         call MATF_MAIN
-
       else
         if (mod(istep,sstep).eq.0) then
           time=0.

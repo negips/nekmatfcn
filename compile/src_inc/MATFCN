@@ -41,8 +41,9 @@
       integer nkryl      ! current size of krylov space
       integer vlen       ! length of krylov vector
       integer sstep      ! no of iterations between Re-Ortho
+      integer inistep    ! no of iterations between Re-Ortho
 
-      common /MATFi/ ngs,nkryl,northo,vlen,sstep
+      common /MATFi/ ngs,nkryl,northo,vlen,sstep,inistep
 
       logical IFMATF          ! if perform Matrix Fcn evals
       logical MATF_IFPR       ! If we use seminorm

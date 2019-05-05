@@ -24,7 +24,7 @@
 
 !     namelists
       namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep,
-     $                  matf_omega 
+     $                  inistep,matf_omega 
 !     default values
       ifmatf         = .FALSE.        ! if perform Matrix functions
       matf_uzawa     = .FALSE.        ! uzawa at the first time step?
@@ -34,6 +34,7 @@
       ngs            = 1              ! no of Gram-Schmidt passes
       sstep          = 100            ! No of steps between
                                       ! successive orthogonalization
+      inistep        = sstep          ! Skip first inisteps
       matf_omega     = 1.0            ! Angular frequency of forcing
                                          
 !     read the file
@@ -71,7 +72,7 @@
 
 !     namelists
       namelist /MATFCN/ ifmatf,matf_ifpr,matf_uzawa,ngs,northo,sstep, 
-     $                  matf_omega
+     $                  inistep,matf_omega
 
 !     read the file
       ierr=0
@@ -129,6 +130,9 @@ c-----------------------------------------------------------------------
 
       complex MATF_INPROD
 
+!     Skip first inisteps      
+      if (istep.lt.inistep) return
+
       if (mod(istep,sstep).ne.0) then
         return
       endif
@@ -154,7 +158,14 @@ c-----------------------------------------------------------------------
         call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
 !       Multiply by weights
         call nek_zrcol2(MATF_AxW1,MATF_ArWt,vlen)
-       
+
+!       Debugging        
+!        beta = MATF_INPROD(MATF_AxW1,MATF_Q,MATF_ArWt,vlen)
+!        beta = zdotc(vlen,MATF_Ax,1,MATF_Q,1)
+!        write(6,*) 'beta', beta
+!        write(6,*) 'Ax', (MATF_Ax(587+j),j=1,3)
+
+
 !       gj = Q^{H}*AxW1
         alpha = complex(1.0,0)
         beta  = complex(0.,0.)
@@ -166,6 +177,7 @@ c-----------------------------------------------------------------------
         incy = 1
         call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_AxW1,
      $                  incx,beta,gj,incy)
+
 !       Sum over processors
         call gop(gj,wkh,'+  ',2*nkryl)
 
@@ -191,78 +203,94 @@ c-----------------------------------------------------------------------
       beta = sqrt(beta)
       hj(nkryl+1)=beta
       call nek_zcopy(MATF_HS(1,nkryl),hj,nkryl+1)
-     
+
 !     Normalize vector 
       call nek_zcmult(MATF_Ax,1./beta,vlen)
 
+!     This will restart Krylov space when it is full
+!     Probably not correct. Need to implement some restart strategy      
+      nkryl= mod(nkryl,northo) + 1
+
 !     Update Orthogonal matrix
-      call nek_zcopy(MATF_Q(1,nkryl+1),MATF_Ax,vlen)
+      call nek_zcopy(MATF_Q(1,nkryl),MATF_Ax,vlen)
+
+!!     Debugging
+!!     Just renormalizing old vector and restarting
+!!     fill up Ax,Axtmp vector
+!      call MATF_getAx
+!      call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
+!      beta = MATF_INPROD(MATF_AxW1,MATF_Ax,MATF_ArWt,vlen)
+!      beta = sqrt(beta)
+!      call nek_zcmult(MATF_Ax,1./beta,vlen)
+!!     In principle there should be no issues with the
+!!     simulation now      
+     
 
 !     Do something to check residual
-!     Estimate solution
-      call nek_zcopy(MATF_HWK,MATF_HS,mfnkryl1*nkryl)
+!     Estimate solution (Not yet)
+      if (.false.) then
+        call nek_zcopy(MATF_HWK,MATF_HS,mfnkryl1*nkryl)
 
-!     Evaluate approximate matrix function inverse
-!     Using Simplified Schur-Parlett method for now      
-      lda = mfnkryl1
-      nc  = nkryl
-      fcn = 'loge'
-      ifinv = .true.
-      pmo = 10
-      call MAT_ZFCN_LN(MATF_HINV,MATF_HWK,lda,nc,pmo,ifinv)
-!      call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
+!       Evaluate approximate matrix function inverse
+!       Using Simplified Schur-Parlett method for now      
+        lda = mfnkryl1
+        nc  = nkryl
+        fcn = 'loge'
+        ifinv = .true.
+        pmo = 10
+        call MAT_ZFCN_LN(MATF_HINV,MATF_HWK,lda,nc,pmo,ifinv)
+!        call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
 
-!     Approximate solution
-!     x_k = ||f||*Q_k*f(H_k)^{-1}*e1
-      alpha = complex(1.0,0)
-      beta  = complex(0.,0.)
-      trans = 'N'
-      lda=qlen0
-      m=vlen
-      n=nkryl
-      incx = 1
-      incy = 1
-      call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HINV,
-     $                incx,beta,MATF_AxW1,incy)
-
-      call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
-
-      if (nkryl.gt.1) then
-
-!       Difference between consecutive estimates      
-        call nek_zsub2(MATF_AxW1,MATF_Axn,vlen)
-
-!       Store approximate solution      
-        call nek_zsub2(MATF_Axn,MATF_AxW2,vlen)
+!       Approximate solution
+!       x_k = ||f||*Q_k*f(H_k)^{-1}*e1
+        alpha = complex(1.0,0)
+        beta  = complex(0.,0.)
+        trans = 'N'
+        lda=qlen0
+        m=vlen
+        n=nkryl
+        incx = 1
+        incy = 1
+        call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HINV,
+     $                  incx,beta,MATF_AxW1,incy)
 
         call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
 
-!       Find norm of difference      
-        beta = MATF_INPROD(MATF_AxW2,MATF_AxW1,MATF_ArWt,vlen)
-        beta = sqrt(beta)
+        if (nkryl.gt.1) then
 
-        if (nid.eq.0) then
-          write(6,303) 'Residual Norm:', abs(beta)
+!         Difference between consecutive estimates      
+          call nek_zsub2(MATF_AxW1,MATF_Axn,vlen)
+
+!         Store approximate solution      
+          call nek_zsub2(MATF_Axn,MATF_AxW2,vlen)
+
+          call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
+
+!         Find norm of difference      
+          beta = MATF_INPROD(MATF_AxW2,MATF_AxW1,MATF_ArWt,vlen)
+          beta = sqrt(beta)
+
+          if (nid.eq.0) then
+            write(6,303) 'Residual Norm:', abs(beta)
+          endif
+ 303      format(A14,1x,E25.16E3)
+
+!         Just exit for now      
+          if (abs(beta).lt.1.0e-6) then
+            call exitt
+          endif
+        else
+!         Store approximate solution      
+          call nek_zsub2(MATF_Axn,MATF_AxW1,vlen)
         endif
- 303    format(A14,1x,E25.16E3)
-
-!       Just exit for now      
-        if (abs(beta).lt.1.0e-6) then
-          call exitt
-        endif
-      else
-!       Store approximate solution      
-        call nek_zsub2(MATF_Axn,MATF_AxW1,vlen)
-      endif
-
-      nkryl=nkryl+1
+      endif       ! if .false.
 
       call MATF_QORTHO_CHK 
 
       call MATF_RESTART
 
 !     For now      
-      if (nkryl.eq.mfnkryl1) call exitt
+      if (nkryl.eq.northo) call exitt
 
       return
       end subroutine MATF_MAIN
@@ -298,8 +326,8 @@ c-----------------------------------------------------------------------
 
 !     Set weights. 
 !     Also sets Arnoldi vector length (vlen)
-      call SET_MATF_WEIGHT
-!      call SET_MATF_WTONE
+!      call SET_MATF_WEIGHT
+      call SET_MATF_WTONE
 
 !     Create Masks
       call SET_MATF_MSK
@@ -333,7 +361,10 @@ c-----------------------------------------------------------------------
 
 !     Add starting vector to Krylov space
       call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
-      nkryl = 0   ! skip the first arbitrary initial condition
+      nkryl = 1   ! =0 if skip the first arbitrary initial condition
+
+!     reset inistep after initialization      
+      inistep=sstep
 
 !     Restart stepper
       call MATF_RESTART
@@ -614,7 +645,6 @@ c-----------------------------------------------------------------------
 !     set vxp,psi etc from Ax      
       call MATF_SETFLDS
 
-
       IFUZAWA = MATF_UZAWA
 
       return
@@ -635,7 +665,7 @@ c-----------------------------------------------------------------------
 
       call nek_zrcol2(x,wt,n)
 
-!     beta = congj(Ax)*ArWt*Ax
+!     beta = congj(x)*ArWt*y
       incx = 1
       incy = 1
       beta = zdotc(n,x,incx,y,incy)

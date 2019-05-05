@@ -211,7 +211,7 @@
       integer i
 
       do i=1,n
-        x(i)=x(i)*y(i)
+        x(i)=x(i)*complex(y(i),0.)
       enddo  
 
       return
@@ -533,15 +533,15 @@
 
 !====================================================================== 
 !----------------------------------------------------------------------
-      subroutine write_zmat(A,n,r,c,nam)
+      subroutine write_zmat(A,lda,r,c,nam)
 
       implicit none
 
       include 'SIZE_DEF'
       include 'SIZE'
 
-      integer n,r,c
-      complex A(n,c)
+      integer lda,r,c
+      complex A(lda,c)
       character outfmt*38
       character nam*3
 
