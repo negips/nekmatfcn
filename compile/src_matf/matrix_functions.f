@@ -6,7 +6,7 @@
 !
 !======================================================================       
 !---------------------------------------------------------------------- 
-      subroutine MAT_ZFCN(fA,A,lda,nc,fcn,ifinv)
+      subroutine MAT_ZFCN(fA,A,wkA,lda,nc,fcn,ifinv)
 
 !     A    = U*T*U^{-1}      ! Schur decomposition             
 !     f(A) = U*f(T)*U^{-1}
@@ -23,6 +23,7 @@
 
       complex A(lda,nc),U(lda,nc)
       complex fA(lda,nc) ! f(A). Assuming same shape as A.
+      complex wkA(lda,nc)     ! Work array
       complex w(nc)
 
       integer m,n,k
@@ -52,17 +53,10 @@
 !     Using Schur-Parlett      
       call MAT_ZFCN_TRI(fA,A,lda,nc,fcn)
 
-      if (ifinv) then      
-!       Matrix inversion of a Triangular Matrix
-        call ztrtri('U','N',nc,fA,lda,info)
-        if (info.ne.0) then
-          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN'
-          call exitt
-        endif
-!       fA now contains the inverse
-      endif
+!     Copy solution      
+      call nek_zcopy(A,fA,lda*nc)
 
-!     A=fA*U^{H}
+!     wkA=fA*U^{H}
       alpha = complex(1.0,0)
       beta  = complex(0.,0.)
       transA = 'N'
@@ -72,9 +66,9 @@
       k=nc
       ldb=lda
       ldc=lda
-      call zgemm(transA,transB,m,n,k,alpha,fA,lda,U,ldb,beta,A,ldc) 
+      call zgemm(transA,transB,m,n,k,alpha,fA,lda,U,ldb,beta,wkA,ldc) 
 
-!     fA=U*A
+!     fA=U*wkA
       alpha = complex(1.0,0)
       beta  = complex(0.,0.)
       transA = 'N'
@@ -84,7 +78,43 @@
       k=nc
       ldb=lda
       ldc=lda
-      call zgemm(transA,transB,m,n,k,alpha,U,lda,A,ldb,beta,fA,ldc) 
+      call zgemm(transA,transB,m,n,k,alpha,U,lda,wkA,ldb,beta,fA,ldc)
+
+!     Calculate inverse if needed      
+      if (ifinv) then      
+!       Matrix inversion of a Triangular Matrix
+        call ztrtri('U','N',nc,A,lda,info)
+        if (info.ne.0) then
+          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN'
+          call exitt
+        endif
+!       A now contains f(T)^{-1}
+
+!       wkA=A*U^{H}
+        alpha = complex(1.0,0)
+        beta  = complex(0.,0.)
+        transA = 'N'
+        transB = 'C'
+        m=nc
+        n=nc
+        k=nc
+        ldb=lda
+        ldc=lda
+        call zgemm(transA,transB,m,n,k,alpha,A,lda,U,ldb,beta,wkA,ldc) 
+
+!       A=U*wkA
+        alpha = complex(1.0,0)
+        beta  = complex(0.,0.)
+        transA = 'N'
+        transB = 'N'
+        m=nc
+        n=nc
+        k=nc
+        ldb=lda
+        ldc=lda
+        call zgemm(transA,transB,m,n,k,alpha,U,lda,wkA,ldb,beta,A,ldc)
+!       A now contains f(A)^{-1}      
+      endif
 
       return
       end subroutine MAT_ZFCN
@@ -211,7 +241,7 @@
       integer i
 
       do i=1,n
-        x(i)=x(i)*complex(y(i),0.)
+        x(i)=x(i)*y(i)
       enddo  
 
       return
@@ -340,7 +370,7 @@
 !     Specialized Algorithms for some functions
 !     Slowly grow this list      
 !====================================================================== 
-      subroutine MAT_ZFCN_LN(fA,A,lda,nc,pmo,ifinv)
+      subroutine MAT_ZFCN_LN(fA,A,wkA,lda,nc,pmo,ifinv)
 
 !     A    = U*T*U^{-1}      ! Schur decomposition             
 !     f(A) = U*f(T)*U^{-1}
@@ -374,12 +404,14 @@
       complex A(lda,nc),U(lda,nc)
       complex fA(lda,nc) ! f(A). Assuming same shape as A.
       complex w(nc)
+      complex wkA(lda,nc)     ! Work array
 
       integer nt
 
 !     Variables for zgemm 
       complex a1,b1
       character transA*1,transB*1
+      integer m,n,k
 
       integer info
       integer i,j
@@ -396,29 +428,61 @@
 !     Evaluate Pade Approximant
       call mat_ln_pade(fA,A,lda,nc,pmo)
 
-      if (ifinv) then      
-!       Matrix inversion of a Triangular Matrix
-        call ztrtri('U','N',nc,fA,lda,info)
-        if (info.ne.0) then
-          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN_LN'
-          call exitt
-        endif
-!       fA now contains the inverse
-      endif
+!     Copy solution      
+      call nek_zcopy(A,fA,lda*nc)
 
-!     A=fA*U^{H}
+!     wkA=fA*U^{H}
       a1 = complex(1.,0.)
       b1 = complex(0.,0.)
       transA = 'N'
       transB = 'C'
-      call zgemm(transA,transB,nc,nc,nc,a1,fA,lda,U,lda,b1,A,lda) 
+      m=nc
+      n=nc
+      k=nc
+      call zgemm(transA,transB,m,n,k,a1,fA,lda,U,lda,b1,wkA,lda) 
 
-!     fA=U*A
+!     fA=U*wkA
       a1 = complex(1.,0.)
       b1 = complex(0.,0.)
       transA = 'N'
       transB = 'N'
-      call zgemm(transA,transB,nc,nc,nc,a1,U,lda,A,lda,b1,fA,lda)
+      m=nc
+      n=nc
+      k=nc
+      call zgemm(transA,transB,m,n,k,a1,U,lda,wkA,lda,b1,fA,lda)
+
+
+!     Calculate inverse if needed      
+      if (ifinv) then      
+!       Matrix inversion of a Triangular Matrix
+        call ztrtri('U','N',nc,A,lda,info)
+        if (info.ne.0) then
+          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN_LN'
+          call exitt
+        endif
+!       A now contains f(T)^{-1}
+
+!       wkA=A*U^{H}
+        a1 = complex(1.0,0)
+        b1  = complex(0.,0.)
+        transA = 'N'
+        transB = 'C'
+        m=nc
+        n=nc
+        k=nc
+        call zgemm(transA,transB,m,n,k,a1,A,lda,U,ldu,b1,wkA,lda) 
+
+!       A=U*wkA
+        a1 = complex(1.0,0)
+        b1 = complex(0.,0.)
+        transA = 'N'
+        transB = 'N'
+        m=nc
+        n=nc
+        k=nc
+        call zgemm(transA,transB,m,n,k,a1,U,lda,wkA,lda,b1,A,lda)
+!       A now contains f(A)^{-1}      
+      endif
 
 
       return

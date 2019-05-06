@@ -51,6 +51,7 @@
       call bcast(northo       , ISIZE)
       call bcast(ngs          , ISIZE)
       call bcast(sstep        , ISIZE)
+      call bcast(inistep      , ISIZE)
       call bcast(matf_omega   ,WDSIZE)
 
       return
@@ -143,8 +144,8 @@ c-----------------------------------------------------------------------
         return
       endif
 
-      nsteps=nsteps+1
-      lastep = 0
+!      nsteps=nsteps+1
+!      lastep = 0
 
 !     fill up Ax,Axtmp vector
       call MATF_getAx
@@ -209,22 +210,10 @@ c-----------------------------------------------------------------------
 
 !     This will restart Krylov space when it is full
 !     Probably not correct. Need to implement some restart strategy      
-      nkryl= mod(nkryl,northo) + 1
+      nkryl= nkryl + 1
 
 !     Update Orthogonal matrix
       call nek_zcopy(MATF_Q(1,nkryl),MATF_Ax,vlen)
-
-!!     Debugging
-!!     Just renormalizing old vector and restarting
-!!     fill up Ax,Axtmp vector
-!      call MATF_getAx
-!      call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
-!      beta = MATF_INPROD(MATF_AxW1,MATF_Ax,MATF_ArWt,vlen)
-!      beta = sqrt(beta)
-!      call nek_zcmult(MATF_Ax,1./beta,vlen)
-!!     In principle there should be no issues with the
-!!     simulation now      
-     
 
 !     Do something to check residual
 !     Estimate solution (Not yet)
@@ -238,11 +227,11 @@ c-----------------------------------------------------------------------
         fcn = 'loge'
         ifinv = .true.
         pmo = 10
-        call MAT_ZFCN_LN(MATF_HINV,MATF_HWK,lda,nc,pmo,ifinv)
-!        call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
+!        call MAT_ZFCN_LN(MATF_HINV,MATF_HWK,lda,nc,pmo,ifinv)
+        call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
 
 !       Approximate solution
-!       x_k = ||f||*Q_k*f(H_k)^{-1}*e1
+!       x_k = Q_k*f(H_k)^{-1}*e1*||f||
         alpha = complex(1.0,0)
         beta  = complex(0.,0.)
         trans = 'N'
@@ -256,6 +245,12 @@ c-----------------------------------------------------------------------
 
         call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
 
+!       Debugging        
+        call MATF_SETFLDS(MATF_AxW1)
+        call outpost(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp,'sl1')
+        call outpost(vxp(1,2),vyp(1,2),vzp(1,2),prp(1,2),tp,'sl2')
+
+
         if (nkryl.gt.1) then
 
 !         Difference between consecutive estimates      
@@ -264,6 +259,7 @@ c-----------------------------------------------------------------------
 !         Store approximate solution      
           call nek_zsub2(MATF_Axn,MATF_AxW2,vlen)
 
+!         Copy difference to AxW2          
           call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
 
 !         Find norm of difference      
@@ -271,9 +267,9 @@ c-----------------------------------------------------------------------
           beta = sqrt(beta)
 
           if (nid.eq.0) then
-            write(6,303) 'Residual Norm:', abs(beta)
+            write(6,303) 'Residual of difference:', abs(beta)
           endif
- 303      format(A14,1x,E25.16E3)
+ 303      format(A23,1x,E25.16E3)
 
 !         Just exit for now      
           if (abs(beta).lt.1.0e-6) then
@@ -285,12 +281,16 @@ c-----------------------------------------------------------------------
         endif
       endif       ! if .false.
 
+      if (nkryl.gt.2) call MATF_EST_RES
+
       call MATF_QORTHO_CHK 
 
       call MATF_RESTART
 
 !     For now      
-      if (nkryl.eq.northo) call exitt
+      if (nkryl.eq.northo+1) then
+        call MATF_FOM_RESTART
+      endif        
 
       return
       end subroutine MATF_MAIN
@@ -363,8 +363,11 @@ c-----------------------------------------------------------------------
       call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
       nkryl = 1   ! =0 if skip the first arbitrary initial condition
 
-!     reset inistep after initialization      
-      inistep=sstep
+!     This is out forcing field
+      call nek_zcopy(MATF_Forc,MATF_Ax,vlen)
+
+!     remove inistep condition after initialization      
+      inistep=0
 
 !     Restart stepper
       call MATF_RESTART
@@ -400,7 +403,7 @@ c-----------------------------------------------------------------------
       do iel=1,nelv
         do iface = 1,nfaces
           cb = cbc(iface,iel,ifld)
-          if (cb.eq.'v  ') then
+          if ((cb.eq.'v  ').or.(cb.eq.'W  ').or.(cb.eq.'mv ')) then
 !           Put zeros on this face
             call facev(mskfld,iel,iface,0.,nx1,ny1,nz1)
           endif
@@ -470,7 +473,7 @@ c-----------------------------------------------------------------------
       end subroutine MATF_getAx
 !---------------------------------------------------------------------- 
 
-      subroutine MATF_SETFLDS
+      subroutine MATF_SETFLDS(cA)
 
 !     assign velocity/fsi fields from MAT_Ax entries
 
@@ -494,21 +497,22 @@ c-----------------------------------------------------------------------
       include 'MASS'
 
       integer i,ntot,ntotp
+      complex cA(1)
       
       ntot=nx1*ny1*nz1*nelv
       i=1
-      call nek_z2ri(vxp(1,1),vxp(1,2),MATF_Ax(i),ntot)
+      call nek_z2ri(vxp(1,1),vxp(1,2),cA(i),ntot)
       call col2(vxp(1,1),MATF_MSK(i),ntot)      ! real
       call col2(vxp(1,2),MATF_MSK(i),ntot)      ! imaginary
 
       i=i+ntot
-      call nek_z2ri(vyp(1,1),vyp(1,2),MATF_Ax(i),ntot)
+      call nek_z2ri(vyp(1,1),vyp(1,2),cA(i),ntot)
       call col2(vyp(1,1),MATF_MSK(i),ntot)      ! real
       call col2(vyp(1,2),MATF_MSK(i),ntot)      ! imaginary
 
       i=i+ntot
       if (if3d) then
-        call nek_z2ri(vzp(1,1),vzp(1,2),MATF_Ax(i),ntot)           
+        call nek_z2ri(vzp(1,1),vzp(1,2),cA(i),ntot)           
         call col2(vzp(1,1),MATF_MSK(i),ntot)    ! real
         call col2(vzp(1,2),MATF_MSK(i),ntot)    ! imaginary
         i=i+ntot
@@ -516,7 +520,7 @@ c-----------------------------------------------------------------------
 
       ntotp=nx2*ny2*nz2*nelv
       if (matf_ifpr) then
-        call nek_z2ri(prp(1,1),prp(1,2),MATF_Ax(i),ntotp)           
+        call nek_z2ri(prp(1,1),prp(1,2),cA(i),ntotp)           
         call col2(prp(1,1),MATF_MSK(i),ntotp)    ! real
         call col2(prp(1,2),MATF_MSK(i),ntotp)    ! imaginary
         i=i+ntotp
@@ -643,7 +647,7 @@ c-----------------------------------------------------------------------
       time=0.
 
 !     set vxp,psi etc from Ax      
-      call MATF_SETFLDS
+      call MATF_SETFLDS(MATF_Ax)
 
       IFUZAWA = MATF_UZAWA
 
@@ -716,6 +720,106 @@ c-----------------------------------------------------------------------
       return
       end subroutine MATF_QORTHO_CHK
 !---------------------------------------------------------------------- 
+
+      subroutine MATF_EST_RES
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'MATFCN'
+
+!     ZGEMV parameters
+      character trans*1
+      integer lda       ! leading dimension of Q
+      integer m,n       ! Part of the Matrix Q to use m x n
+      complex alpha
+      complex beta
+      integer incx      ! memory skip for x
+      integer incy      ! memory skip for y
+
+      complex zdotc     ! BLAS function
+
+!     Matrix function evaluation      
+      integer nc
+      character fcn*4
+      logical ifinv
+      integer pmo       ! Pade approximant order
+
+      complex MATF_INPROD
+
+      complex HS_WK2(mfnkryl1,mfnkryl)    ! work array 
+      complex yk(mfnkryl1)                ! aprrox. soln
+
+!     Estimate solution (Not yet)
+      call nek_zcopy(MATF_HINV,MATF_HS,mfnkryl1*nkryl-1)
+
+!     Evaluate approximate matrix function inverse
+!     Using Simplified Schur-Parlett method for now      
+      lda = mfnkryl1
+      nc  = nkryl-1
+      fcn = 'loge'
+      ifinv = .true.
+      pmo = 16
+!      call MAT_ZFCN_LN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,pmo,ifinv)
+      call MAT_ZFCN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,fcn,ifinv)
+
+!     Approximate solution in R^{k}
+!     f(A)x ~ Qk*f(H_k)*e1*||f||
+      call nek_zcopy(yk,MATF_HWK,nc)  ! Just the first row.
+
+      if (nid.eq.0) then
+        write(6,*) 'Last Vector',yk(nc),abs(yk(nc))
+      endif 
+
+
+!!     Approximate f(A)*x      
+!      alpha = complex(1.0,0)
+!      beta  = complex(0.,0.)
+!      trans = 'N'
+!      lda=qlen0
+!      m=vlen
+!      n=nkryl
+!      incx = 1
+!      incy = 1
+!      call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HWK,
+!     $                incx,beta,MATF_AxW1,incy)
+!
+!      call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
+
+
+      return
+      end subroutine MATF_EST_RES            
+!---------------------------------------------------------------------- 
+     
+      subroutine MATF_FOM_RESTART
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'MATFCN'
+
+      call exitt      
+
+      return
+      end subroutine MATF_FOM_RESTART
+!---------------------------------------------------------------------- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

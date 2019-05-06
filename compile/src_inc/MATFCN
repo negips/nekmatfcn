@@ -28,8 +28,11 @@
       complex MATF_Axn(qlen0)             ! Previous iteration solution
       complex MATF_AxW1(qlen0)            ! Work array
       complex MATF_AxW2(qlen0)            ! Work array
+      complex MATF_Forc(qlen0)            ! Work array
+      complex MATF_Soln(qlen0)            ! Work array
 
-      common /MATFzv/ MATF_Q,MATF_HS,MATF_Ax,MATF_Axn
+      common /MATFzv/ MATF_Q,MATF_HS,MATF_Ax,MATF_Axn,MATF_Forc,
+     $                MATF_Soln 
 
       real MATF_ArWt(qlen0)               ! Arnoldi Weights
       real MATF_MSK(qlen0)                ! Arnoldi Mask
