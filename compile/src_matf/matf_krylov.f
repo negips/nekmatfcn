@@ -131,11 +131,14 @@ c-----------------------------------------------------------------------
 
       complex MATF_INPROD
 
-      if (.not.IFMATF) call return
+      if (.not.IFMATF) return
 
       if (northo.gt.mfnkryl) then
         if (nid.eq.0) write(6,*)
-     $   'NORTHO > MFNKRYL', northo, mfnkryl         
+     $   'NORTHO > MFNKRYL', northo, mfnkryl
+
+        call exitt
+      endif        
 
 !     Skip first inisteps      
       if (istep.lt.inistep) return
@@ -165,13 +168,6 @@ c-----------------------------------------------------------------------
         call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
 !       Multiply by weights
         call nek_zrcol2(MATF_AxW1,MATF_ArWt,vlen)
-
-!       Debugging        
-!        beta = MATF_INPROD(MATF_AxW1,MATF_Q,MATF_ArWt,vlen)
-!        beta = zdotc(vlen,MATF_Ax,1,MATF_Q,1)
-!        write(6,*) 'beta', beta
-!        write(6,*) 'Ax', (MATF_Ax(587+j),j=1,3)
-
 
 !       gj = Q^{H}*AxW1
         alpha = complex(1.0,0)
@@ -214,84 +210,13 @@ c-----------------------------------------------------------------------
 !     Normalize vector 
       call nek_zcmult(MATF_Ax,1./beta,vlen)
 
-!     This will restart Krylov space when it is full
-!     Probably not correct. Need to implement some restart strategy      
       nkryl= nkryl + 1
 
 !     Update Orthogonal matrix
       call nek_zcopy(MATF_Q(1,nkryl),MATF_Ax,vlen)
 
-!     Do something to check residual
-!     Estimate solution (Not yet)
-      if (.false.) then
-        call nek_zcopy(MATF_HWK,MATF_HS,mfnkryl1*nkryl)
-
-!       Evaluate approximate matrix function inverse
-!       Using Simplified Schur-Parlett method for now      
-        lda = mfnkryl1
-        nc  = nkryl
-        fcn = 'loge'
-        ifinv = .true.
-        pmo = 10
-!        call MAT_ZFCN_LN(MATF_HINV,MATF_HWK,lda,nc,pmo,ifinv)
-        call MAT_ZFCN(MATF_HINV,MATF_HWK,lda,nc,fcn,ifinv)
-
-!       Approximate solution
-!       x_k = Q_k*f(H_k)^{-1}*e1*||f||
-        alpha = complex(1.0,0)
-        beta  = complex(0.,0.)
-        trans = 'N'
-        lda=qlen0
-        m=vlen
-        n=nkryl
-        incx = 1
-        incy = 1
-        call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HINV,
-     $                  incx,beta,MATF_AxW1,incy)
-
-        call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
-
-!       Debugging        
-        call MATF_SETFLDS(MATF_AxW1)
-        call outpost(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),tp,'sl1')
-        call outpost(vxp(1,2),vyp(1,2),vzp(1,2),prp(1,2),tp,'sl2')
-
-
-        if (nkryl.gt.1) then
-
-!         Difference between consecutive estimates      
-          call nek_zsub2(MATF_AxW1,MATF_Axn,vlen)
-
-!         Store approximate solution      
-          call nek_zsub2(MATF_Axn,MATF_AxW2,vlen)
-
-!         Copy difference to AxW2          
-          call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
-
-!         Find norm of difference      
-          beta = MATF_INPROD(MATF_AxW2,MATF_AxW1,MATF_ArWt,vlen)
-          beta = sqrt(beta)
-
-          if (nid.eq.0) then
-            write(6,303) 'Residual of difference:', abs(beta)
-          endif
- 303      format(A23,1x,E25.16E3)
-
-!         Just exit for now      
-          if (abs(beta).lt.1.0e-6) then
-            call exitt
-          endif
-        else
-!         Store approximate solution      
-          call nek_zsub2(MATF_Axn,MATF_AxW1,vlen)
-        endif
-      endif       ! if .false.
-
-      if (nkryl.gt.2) call MATF_EST_RES
-
-      call MATF_QORTHO_CHK 
-
-      call MATF_RESTART
+!     Check residuals and restart      
+      call MATF_LN_RESTART
 
 !     For now      
       if (nkryl.eq.northo+1) then
@@ -313,8 +238,8 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'MATFCN'
 
-      include 'SOLN_DEF'
-      include 'SOLN'
+!      include 'SOLN_DEF'
+!      include 'SOLN'
 
       integer i
 
@@ -369,14 +294,14 @@ c-----------------------------------------------------------------------
       call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
       nkryl = 1   ! =0 if skip the first arbitrary initial condition
 
-!     This is out forcing field
+!     This is our forcing field
       call nek_zcopy(MATF_Forc,MATF_Ax,vlen)
 
 !     remove inistep condition after initialization      
       inistep=0
 
 !     Restart stepper
-      call MATF_RESTART
+      call MATF_LN_RESTART
 
       return
       end subroutine MATF_INIT
@@ -637,7 +562,7 @@ c-----------------------------------------------------------------------
       end subroutine SET_MATF_WTONE
 !---------------------------------------------------------------------- 
 
-      subroutine MATF_RESTART
+      subroutine MATF_LN_RESTART
 
       implicit none
 
@@ -649,16 +574,21 @@ c-----------------------------------------------------------------------
       include 'TSTEP'
       include 'MATFCN'
 
+
+      call MATF_EST_RES
+
+!      call MATF_QORTHO_CHK 
+
       istep=0
       time=0.
 
-!     set vxp,psi etc from Ax      
-      call MATF_SETFLDS(MATF_Ax)
+!     set vxp,psi etc from Ax
+      if (nkryl.gt.1) call MATF_SETFLDS(MATF_Ax)
 
       IFUZAWA = MATF_UZAWA
 
       return
-      end subroutine MATF_RESTART
+      end subroutine MATF_LN_RESTART
 !---------------------------------------------------------------------- 
 
       complex function MATF_INPROD(x,y,wt,n)
@@ -754,45 +684,59 @@ c-----------------------------------------------------------------------
 
       complex MATF_INPROD
 
-      complex HS_WK2(mfnkryl1,mfnkryl)    ! work array 
-      complex yk(mfnkryl1)                ! aprrox. soln
+      complex MATF_HINV(mfnkryl1,mfnkryl) ! Inverse Hessenberg Matrix
+      complex HS_WK2(mfnkryl1,mfnkryl)    ! Another work array
 
-!     Estimate solution (Not yet)
-      call nek_zcopy(MATF_HINV,MATF_HS,mfnkryl1*nkryl-1)
+      real resid
+      real lntol
+      parameter (lntol=1.0e-7)
 
-!     Evaluate approximate matrix function inverse
-!     Using Simplified Schur-Parlett method for now      
+
+!     Evaluate approximate matrix function
       lda = mfnkryl1
       nc  = nkryl-1
       fcn = 'loge'
       ifinv = .true.
       pmo = 16
+      call nek_zcopy(MATF_HINV,MATF_HS,lda*nc)
+
 !      call MAT_ZFCN_LN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,pmo,ifinv)
       call MAT_ZFCN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,fcn,ifinv)
 
-!     Approximate solution in R^{k}
-!     f(A)x ~ Qk*f(H_k)*e1*||f||
-      call nek_zcopy(yk,MATF_HWK,nc)  ! Just the first row.
+!      call write_zmat(MATF_HWK,mfnkryl1,nc,nc,'Hes')      
+
+      resid = abs(MATF_HWK(nc,1))
 
       if (nid.eq.0) then
-        write(6,*) 'Last Vector',nc,abs(MATF_HWK(nc,1)),
-     $      abs(MATF_HINV(nc,1))
+!       This is the weight of the new vector
+        write(6,*) 'Qk Weight',nc,resid
       endif
 
+      if (nkryl.eq.(northo+1)) then
+        if (nid.eq.0) write(6,*) 'f(A)x unconverged', resid
+        resid=0.
+      endif        
 
-!!     Approximate f(A)*x      
-!      alpha = complex(1.0,0)
-!      beta  = complex(0.,0.)
-!      trans = 'N'
-!      lda=qlen0
-!      m=vlen
-!      n=nkryl
-!      incx = 1
-!      incy = 1
-!      call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HWK,
-!     $                incx,beta,MATF_AxW1,incy)
-!
-!      call nek_zcopy(MATF_AxW2,MATF_AxW1,vlen)
+
+!     If the weight is small we are converged      
+      if (resid.lt.lntol) then
+!!      Approximate f(A)*x      
+        alpha = complex(1.0,0)
+        beta  = complex(0.,0.)
+        trans = 'N'
+        lda=qlen0
+        m=vlen
+        n=nkryl-1
+        incx = 1
+        incy = 1
+!       Overwrite Ax        
+        call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HWK,
+     $                  incx,beta,MATF_Ax,incy)
+
+!       Generate new vector for Outer Krylov loop 
+        call GMR_EXTEND_KRYLOV
+
+      endif        
 
 
       return
@@ -813,9 +757,103 @@ c-----------------------------------------------------------------------
       end subroutine MATF_FOM_RESTART
 !---------------------------------------------------------------------- 
 
+      subroutine GMR_EXTEND_KRYLOV
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'MATFCN'
+
+      integer i,j,igs
+      complex hj(mfnkryl1)
+      complex gj(mfnkryl1)
+      complex wkh(mfnkryl1)
+
+!     ZGEMV parameters
+      character trans*1
+      integer lda       ! leading dimension of Q
+      integer m,n       ! Part of the Matrix Q to use m x n
+      complex alpha
+      complex beta
+      integer incx      ! memory skip for x
+      integer incy      ! memory skip for y
+
+      complex zdotc     ! BLAS function
+
+!     Matrix function evaluation      
+      integer nc
+      character fcn*4
+      logical ifinv
+      integer pmo       ! Pade approximant order
+
+      complex MATF_INPROD
 
 
+      call nek_zzero(hj,mfnkryl1)
+      call nek_zzero(gj,mfnkryl1)
 
+!     Grahm-Schmidt
+      do igs=1,ngs            ! No of GS passes
+
+        call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
+!       Multiply by weights
+        call nek_zrcol2(MATF_AxW1,MATF_ArWt,vlen)
+
+!       gj = Q^{H}*AxW1
+        alpha = complex(1.0,0)
+        beta  = complex(0.,0.)
+        trans = 'C'     ! Hermitian transpose
+        lda=qlen0
+        m=vlen
+        n=gmr_nkryl
+        incx = 1
+        incy = 1
+        call zgemv(trans,m,n,alpha,GMR_Q,lda,MATF_AxW1,
+     $                  incx,beta,gj,incy)
+
+!       Sum over processors
+        call gop(gj,wkh,'+  ',2*nkryl)
+
+!       Ax = Ax - Q*gj
+        alpha = complex(-1.0,0)
+        beta  = complex(1.,0.)
+        trans = 'N'
+        lda=qlen0
+        m=vlen
+        n=gmr_nkryl
+        incx = 1
+        incy = 1
+        call zgemv(trans,m,n,alpha,GMR_Q,lda,gj,
+     $                  incx,beta,MATF_Ax,incy)
+
+        call nek_zadd2(hj,gj,nkryl)
+      enddo
+
+!     Update Hessenberg
+!     beta = sqrt(congj(Ax)*ArWt*Ax)
+      call nek_zcopy(MATF_AxW1,MATF_Ax,vlen)
+      beta = MATF_INPROD(MATF_AxW1,MATF_Ax,MATF_ArWt,vlen)
+      beta = sqrt(beta)
+      hj(gmr_nkryl+1)=beta
+      call nek_zcopy(GMR_HS(1,gmr_nkryl),hj,gmr_nkryl+1)
+
+!     Normalize vector 
+      call nek_zcmult(MATF_Ax,1./beta,vlen)
+
+      gmr_nkryl= gmr_nkryl + 1
+
+!     Update Orthogonal matrix
+      call nek_zcopy(GMR_Q(1,gmr_nkryl),MATF_Ax,vlen)
+
+!     Reinitialize Orthogonal basis for Matrix log
+      nkryl = 1
+      call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
+
+
+      return
+      end subroutine GMR_EXTEND_KRYLOV            
+!---------------------------------------------------------------------- 
 
 
 

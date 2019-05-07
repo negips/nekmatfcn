@@ -8,7 +8,7 @@
       integer mfnkryl     ! No. of Krylov vectors
       integer mfnkryl1    ! MFNKRYL+1
 
-      parameter (mfnkryl=20)
+      parameter (mfnkryl=100)
       parameter (mfnkryl1=mfnkryl+1)
 
 

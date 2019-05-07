@@ -21,7 +21,6 @@
 !     Arnoldi Krylov sub-space
       complex MATF_Q(qlen0,mfnkryl1)      ! Orthogonal Matrix
       complex MATF_HS(mfnkryl1,mfnkryl)   ! Hessenberg Matrix
-      complex MATF_HINV(mfnkryl1,mfnkryl) ! Inverse Hessenberg Matrix
       complex MATF_HWK(mfnkryl1,mfnkryl)  ! Work array for Hessenberg Matrix
 
       complex MATF_Ax(qlen0)              ! Single vector
@@ -31,8 +30,8 @@
       complex MATF_Forc(qlen0)            ! Work array
       complex MATF_Soln(qlen0)            ! Work array
 
-      common /MATFzv/ MATF_Q,MATF_HS,MATF_Ax,MATF_Axn,MATF_Forc,
-     $                MATF_Soln 
+      common /MATFzv/ MATF_Q,MATF_HS,MATF_HWK,MATF_Ax,MATF_Axn,
+     $                MATF_Forc,MATF_Soln 
 
       real MATF_ArWt(qlen0)               ! Arnoldi Weights
       real MATF_MSK(qlen0)                ! Arnoldi Mask
@@ -62,7 +61,7 @@
 !----------------------------------------------------------------------
 
       integer gmrkryl,gmrkryl1
-      parameter (gmrkryl=50)
+      parameter (gmrkryl=100)
       parameter (gmrkryl1=gmrkryl+1)
 
 !     GMRES Krylov sub-space
@@ -76,10 +75,12 @@
       complex GMR_AxW2(qlen0)            ! Work array
       complex GMR_Soln(qlen0)            ! Work array
 
-      common /GMRzv/ GMR_Q,GMR_HS,GMR_Ax,GMR_Axn,GMR_Forc,
-     $                GMR_Soln 
+      common /GMRzv/ GMR_Q,GMR_HS,GMR_Ax,GMR_Soln 
 
+      integer gmr_northo     ! no of Krylov vectors to save for GMRES
+      integer gmr_nkryl      ! current size of GMRES krylov space
 
+      common /GMRi/ gmr_nkryl,gmr_northo
 
 
 
