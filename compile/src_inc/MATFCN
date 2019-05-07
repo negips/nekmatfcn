@@ -58,6 +58,32 @@
 
       common /MATFr/ matf_omega
 
+!     GMRES variables
+!----------------------------------------------------------------------
 
+      integer gmrkryl,gmrkryl1
+      parameter (gmrkryl=50)
+      parameter (gmrkryl1=gmrkryl+1)
+
+!     GMRES Krylov sub-space
+      complex GMR_Q(qlen0,gmrkryl1)      ! Orthogonal Matrix
+      complex GMR_HS(gmrkryl1,gmrkryl)   ! Hessenberg Matrix
+      complex GMR_HINV(gmrkryl1,gmrkryl) ! Inverse Hessenberg Matrix
+      complex GMR_HWK(gmrkryl1,gmrkryl)  ! Work array for Hessenberg Matrix
+
+      complex GMR_Ax(qlen0)              ! Single vector
+      complex GMR_AxW1(qlen0)            ! Work array
+      complex GMR_AxW2(qlen0)            ! Work array
+      complex GMR_Soln(qlen0)            ! Work array
+
+      common /GMRzv/ GMR_Q,GMR_HS,GMR_Ax,GMR_Axn,GMR_Forc,
+     $                GMR_Soln 
+
+
+
+
+
+
+      
 
 

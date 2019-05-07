@@ -131,6 +131,12 @@ c-----------------------------------------------------------------------
 
       complex MATF_INPROD
 
+      if (.not.IFMATF) call return
+
+      if (northo.gt.mfnkryl) then
+        if (nid.eq.0) write(6,*)
+     $   'NORTHO > MFNKRYL', northo, mfnkryl         
+
 !     Skip first inisteps      
       if (istep.lt.inistep) return
 
