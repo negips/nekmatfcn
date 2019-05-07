@@ -218,11 +218,6 @@ c-----------------------------------------------------------------------
 !     Check residuals and restart      
       call MATF_LN_RESTART
 
-!     For now      
-      if (nkryl.eq.northo+1) then
-        call MATF_FOM_RESTART
-      endif        
-
       return
       end subroutine MATF_MAIN
 
@@ -296,6 +291,10 @@ c-----------------------------------------------------------------------
 
 !     This is our forcing field
       call nek_zcopy(MATF_Forc,MATF_Ax,vlen)
+
+!     Add starting vector to Outer Krylov space
+      call nek_zcopy(GMR_Q(1,1),MATF_Ax,vlen)
+      gmr_nkryl = nkryl
 
 !     remove inistep condition after initialization      
       inistep=0
@@ -575,7 +574,7 @@ c-----------------------------------------------------------------------
       include 'MATFCN'
 
 
-      call MATF_EST_RES
+      if (nkryl.gt.1) call MATF_EST_RES
 
 !      call MATF_QORTHO_CHK 
 
@@ -583,7 +582,7 @@ c-----------------------------------------------------------------------
       time=0.
 
 !     set vxp,psi etc from Ax
-      if (nkryl.gt.1) call MATF_SETFLDS(MATF_Ax)
+      call MATF_SETFLDS(MATF_Ax)
 
       IFUZAWA = MATF_UZAWA
 
@@ -689,19 +688,19 @@ c-----------------------------------------------------------------------
 
       real resid
       real lntol
-      parameter (lntol=1.0e-7)
+      parameter (lntol=1.0e-10)
 
 
 !     Evaluate approximate matrix function
       lda = mfnkryl1
       nc  = nkryl-1
       fcn = 'loge'
-      ifinv = .true.
+      ifinv = .false.
       pmo = 16
       call nek_zcopy(MATF_HINV,MATF_HS,lda*nc)
 
-!      call MAT_ZFCN_LN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,pmo,ifinv)
-      call MAT_ZFCN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,fcn,ifinv)
+      call MAT_ZFCN_LN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,pmo,ifinv)
+!      call MAT_ZFCN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,fcn,ifinv)
 
 !      call write_zmat(MATF_HWK,mfnkryl1,nc,nc,'Hes')      
 
@@ -713,7 +712,7 @@ c-----------------------------------------------------------------------
       endif
 
       if (nkryl.eq.(northo+1)) then
-        if (nid.eq.0) write(6,*) 'f(A)x unconverged', resid
+        if (nid.eq.0) write(6,*) 'f(A)x unconverged',resid
         resid=0.
       endif        
 
@@ -741,20 +740,6 @@ c-----------------------------------------------------------------------
 
       return
       end subroutine MATF_EST_RES            
-!---------------------------------------------------------------------- 
-     
-      subroutine MATF_FOM_RESTART
-
-      implicit none
-
-      include 'SIZE_DEF'
-      include 'SIZE'
-      include 'MATFCN'
-
-      call exitt      
-
-      return
-      end subroutine MATF_FOM_RESTART
 !---------------------------------------------------------------------- 
 
       subroutine GMR_EXTEND_KRYLOV
@@ -813,7 +798,7 @@ c-----------------------------------------------------------------------
      $                  incx,beta,gj,incy)
 
 !       Sum over processors
-        call gop(gj,wkh,'+  ',2*nkryl)
+        call gop(gj,wkh,'+  ',2*gmr_nkryl)
 
 !       Ax = Ax - Q*gj
         alpha = complex(-1.0,0)
@@ -827,7 +812,7 @@ c-----------------------------------------------------------------------
         call zgemv(trans,m,n,alpha,GMR_Q,lda,gj,
      $                  incx,beta,MATF_Ax,incy)
 
-        call nek_zadd2(hj,gj,nkryl)
+        call nek_zadd2(hj,gj,gmr_nkryl)
       enddo
 
 !     Update Hessenberg
@@ -838,18 +823,26 @@ c-----------------------------------------------------------------------
       hj(gmr_nkryl+1)=beta
       call nek_zcopy(GMR_HS(1,gmr_nkryl),hj,gmr_nkryl+1)
 
+!     Debugging      
+!      call write_zmat(GMR_HS,gmrkryl1,gmr_nkryl+1,gmr_nkryl,'GMR')
+
 !     Normalize vector 
       call nek_zcmult(MATF_Ax,1./beta,vlen)
 
       gmr_nkryl= gmr_nkryl + 1
 
-!     Update Orthogonal matrix
+!     Update Outer Orthogonal matrix
       call nek_zcopy(GMR_Q(1,gmr_nkryl),MATF_Ax,vlen)
 
 !     Reinitialize Orthogonal basis for Matrix log
       nkryl = 1
       call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
 
+!     Just exit for now      
+      if (gmr_nkryl.eq.gmrkryl1) call exitt
+
+
+      
 
       return
       end subroutine GMR_EXTEND_KRYLOV            

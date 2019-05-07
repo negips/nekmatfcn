@@ -144,8 +144,8 @@ c     random distribution
 !      ran = cos(ran)
 !      uy  = ran*amp
 
-      ux = rand()
-      uy = rand()
+      ux = rand()*exp(-0.1*abs(y))
+      uy = rand()*exp(-0.1*abs(y))
       uz = 0.0
 
 
@@ -242,32 +242,29 @@ c-----------------------------------------------------------------------
 !
 !      endif        
 
+      call MATF_MAIN
+
       if (ifmatf) then
-        call MATF_MAIN
-      else
-        if (mod(istep,sstep).eq.0) then
-          time=0.
-          istep=0
-        endif
+        call opcopy(optfx(1,1),optfy(1,1),optfz(1,1),
+     $                  vxp(1,2),vyp(1,2),vzp(1,2))
+        call opcmult(optfx(1,1),optfy(1,1),optfz(1,1),matf_omega)
+
+        call opcopy(optfx(1,2),optfy(1,2),optfz(1,2),
+     $                  vxp(1,1),vyp(1,1),vzp(1,1))
+        call opcmult(optfx(1,2),optfy(1,2),optfz(1,2),-matf_omega)
       endif
 
-      call opcopy(optfx(1,1),optfy(1,1),optfz(1,1),
-     $                vxp(1,2),vyp(1,2),vzp(1,2))
-      call opcmult(optfx(1,1),optfy(1,1),optfz(1,1),matf_omega)
-
-      call opcopy(optfx(1,2),optfy(1,2),optfz(1,2),
-     $                vxp(1,1),vyp(1,1),vzp(1,1))
-      call opcmult(optfx(1,2),optfy(1,2),optfz(1,2),-matf_omega)
-
-
-      if (istep.eq.0) then
+      if (istep.eq.0.and.nkryl.eq.1) then
         call outpost(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),
      $      tp(1,1,1),'pr1') 
         call outpost(vxp(1,2),vyp(1,2),vzp(1,2),prp(1,2),
      $      tp(1,1,2),'pr2')
 
-        call outpost(optfx(1,1),optfy(1,1),optfz(1,1),prp(1,1),
-     $      tp(1,1,1),'pf1') 
+!        call outpost(optfx(1,1),optfy(1,1),optfz(1,1),prp(1,1),
+!     $      tp(1,1,1),'pf1')
+
+!      outpost base flow        
+       call outpost(vx,vy,vz,pr,t,'  ') 
 
       endif        
 
