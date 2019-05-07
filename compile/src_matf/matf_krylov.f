@@ -769,8 +769,9 @@ c-----------------------------------------------------------------------
       call nek_zcopy(yk,MATF_HWK,nc)  ! Just the first row.
 
       if (nid.eq.0) then
-        write(6,*) 'Last Vector',yk(nc),abs(yk(nc))
-      endif 
+        write(6,*) 'Last Vector',nc,abs(MATF_HWK(nc,1)),
+     $      abs(MATF_HINV(nc,1))
+      endif
 
 
 !!     Approximate f(A)*x      
