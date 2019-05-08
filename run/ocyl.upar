@@ -92,7 +92,7 @@
  NGS        =1, 
  NORTHO     =90,
  SSTEP      =10,
- INISTEP    =5000,
+ INISTEP    =500,
  matf_omega =0.5,
 /
 

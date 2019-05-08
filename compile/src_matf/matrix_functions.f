@@ -416,17 +416,36 @@
       integer info
       integer i,j
 
+      integer nroots
+      parameter (nroots=10)    ! No of matrix square roots
+      real scal
+      character fcn*4
+      logical ifinv2
+       
+
 !     Complex Schur Decomposition (Double-Precision)
       ldu=lda 
       call wrp_zschur(A,lda,nc,U,ldu,w)
 !     A now contains the Complex Upper-Triangular Matrix
 !     U has the Schur vectors
 
+!     Matrix Square roots      
+      scal = 2.**nroots
+      do i=1,nroots
+        fcn = 'sqrt'
+        ifinv2 = .false.
+        call MAT_ZFCN(fA,A,wkA,lda,nc,fcn,ifinv2)
+        call nek_zcopy(A,fA,lda*nc)
+      enddo
+
 !     Debugging
 !      call write_zmat(A,lda,nc,nc,'PdT')
 
 !     Evaluate Pade Approximant
       call mat_ln_pade(fA,A,lda,nc,pmo)
+
+!     Multiply by scalar factor      
+      call nek_zrcmult(fA,scal,lda*nc)
 
 !     Copy solution      
       call nek_zcopy(A,fA,lda*nc)

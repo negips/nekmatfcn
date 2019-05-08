@@ -123,12 +123,6 @@ c-----------------------------------------------------------------------
 
       complex zdotc     ! BLAS function 
 
-!     Matrix function evaluation      
-      integer nc
-      character fcn*4
-      logical ifinv
-      integer pmo       ! Pade approximant order
-
       complex MATF_INPROD
 
       if (.not.IFMATF) return
