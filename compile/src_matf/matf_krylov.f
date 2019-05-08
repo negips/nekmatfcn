@@ -309,13 +309,14 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'INPUT_DEF'
       include 'INPUT'
-      include 'FSI'
-      include 'NLFSI'
+      include 'SOLN_DEF'
+      include 'SOLN'
       include 'MATFCN'  
         
       integer ifld,nfaces,iel,iface
       character cb*3
       integer i,ntot,ntotp
+      integer nlag,nlagp,nlagex
 
       real mskfld(lx1,ly1,lz1,lelv)
 
@@ -328,13 +329,18 @@ c-----------------------------------------------------------------------
         do iface = 1,nfaces
           cb = cbc(iface,iel,ifld)
           if ((cb.eq.'v  ').or.(cb.eq.'W  ').or.(cb.eq.'mv ')) then
-!           Put zeros on this face
+!           Put zeros on these faces
             call facev(mskfld,iel,iface,0.,nx1,ny1,nz1)
           endif
         enddo ! iel
       enddo   ! iface
 
       ntot=nx1*ny1*nz1*nelv
+      ntotp=nx2*ny2*nz2*nelv
+      nlag = ntot*(lorder-1)
+      nlagp=ntotp*lorder2
+      nlagex=ntot*2
+
       i=1
       call copy(MATF_MSK(i),mskfld,ntot)
       i=i+ntot
@@ -346,10 +352,37 @@ c-----------------------------------------------------------------------
       endif
 
       if (matf_ifpr) then
-        ntotp=nx2*ny2*nz2*nelv
         call rone(MATF_MSK(i),ntotp)
         i=i+ntotp
       endif  
+
+      if (vlag0.gt.0) then
+        call copy(MATF_MSK(i),mskfld,nlag)
+        i=i+nlag
+        call copy(MATF_MSK(i),mskfld,nlag)
+        i=i+nlag
+        if (if3d) then
+          call copy(MATF_MSK(i),mskfld,nlag)
+          i=i+nlag
+        endif
+      endif        
+           
+      if ((prlag0.gt.0).and.(matf_ifpr)) then
+        call rone(MATF_MSK(i),nlagp)
+        i=i+nlagp
+      endif        
+
+      if (exlag0.gt.0) then
+        call copy(MATF_MSK(i),mskfld,nlagex)
+        i=i+nlagex
+        call copy(MATF_MSK(i),mskfld,nlagex)
+        i=i+nlagex
+        if (if3d) then
+          call copy(MATF_MSK(i),mskfld,nlagex)
+          i=i+nlagex
+        endif
+      endif        
+
 
       return
       end subroutine SET_MATF_MSK
@@ -367,13 +400,16 @@ c-----------------------------------------------------------------------
       include 'SOLN'
       include 'INPUT_DEF'
       include 'INPUT'
-      include 'FSI'
-      include 'NLFSI'
       include 'MATFCN'
 
-      integer i,ntot,ntotp
+      integer i,j,ntot,ntotp
+      integer nlag,nlagp
       
       ntot=nx1*ny1*nz1*nelv
+      ntotp=nx2*ny2*nz2*nelv
+      nlag = ntot*(lorder-1)
+      nlagp=ntotp*lorder2
+
       i=1
       call nek_ri2z(MATF_Ax(i),vxp(1,1),vxp(1,2),ntot)           
       i=i+ntot
@@ -385,10 +421,56 @@ c-----------------------------------------------------------------------
       endif
 
       if (matf_ifpr) then
-        ntotp=nx2*ny2*nz2*nelv
         call nek_ri2z(MATF_Ax(i),prp(1,1),prp(1,2),ntotp)           
         i=i+ntotp
       endif 
+
+!     Copy lag arrays      
+      if (vlag0.gt.0) then
+        do j=1,lorder-1            
+          call nek_ri2z(MATF_Ax(i),vxlagp(1,j,1),vxlagp(1,j,2),ntot)
+          i=i+ntot
+        enddo          
+
+        do j=1,lorder-1            
+          call nek_ri2z(MATF_Ax(i),vylagp(1,j,1),vylagp(1,j,2),ntot)
+          i=i+ntot
+        enddo          
+
+        if (if3d) then
+          do j=1,lorder-1            
+            call nek_ri2z(MATF_Ax(i),vzlagp(1,j,1),vzlagp(1,j,2),ntot)
+            i=i+ntot
+          enddo          
+        endif
+      endif       ! vlag0.gt.0 
+           
+      if ((prlag0.gt.0).and.(matf_ifpr)) then
+        do j=1,lorder2        
+          call nek_ri2z(MATF_Ax(i),prlagp(1,j,1),prlagp(1,j,2),ntotp)
+          i=i+ntotp
+        enddo          
+      endif       ! prlag0.gt.0 
+
+      if (exlag0.gt.0) then
+        call nek_ri2z(MATF_Ax(i),exx1p(1,1),exx1p(1,2),ntot)
+        i=i+ntot
+        call nek_ri2z(MATF_Ax(i),exx2p(1,1),exx2p(1,2),ntot)
+        i=i+ntot
+
+        call nek_ri2z(MATF_Ax(i),exy1p(1,1),exy1p(1,2),ntot)
+        i=i+ntot
+        call nek_ri2z(MATF_Ax(i),exy2p(1,1),exy2p(1,2),ntot)
+        i=i+ntot
+
+        if (if3d) then
+          call nek_ri2z(MATF_Ax(i),exz1p(1,1),exz1p(1,2),ntot)
+          i=i+ntot
+          call nek_ri2z(MATF_Ax(i),exz2p(1,1),exz2p(1,2),ntot)
+          i=i+ntot
+        endif
+      endif       ! exlag0.gt.0 
+
 
 !     Multiply by mask      
       call nek_zrcol2(MATF_Ax,MATF_MSK,vlen)
@@ -420,10 +502,12 @@ c-----------------------------------------------------------------------
       include 'MASS_DEF'
       include 'MASS'
 
-      integer i,ntot,ntotp
+      integer i,j,ntot,ntotp
       complex cA(1)
       
       ntot=nx1*ny1*nz1*nelv
+      ntotp=nx2*ny2*nz2*nelv
+
       i=1
       call nek_z2ri(vxp(1,1),vxp(1,2),cA(i),ntot)
       call col2(vxp(1,1),MATF_MSK(i),ntot)      ! real
@@ -442,7 +526,6 @@ c-----------------------------------------------------------------------
         i=i+ntot
       endif
 
-      ntotp=nx2*ny2*nz2*nelv
       if (matf_ifpr) then
         call nek_z2ri(prp(1,1),prp(1,2),cA(i),ntotp)           
         call col2(prp(1,1),MATF_MSK(i),ntotp)    ! real
@@ -453,6 +536,60 @@ c-----------------------------------------------------------------------
         call rzero(prp(1,2),ntotp)  ! imaginary
       endif
 
+!     Copy lag arrays      
+      if (vlag0.gt.0) then
+        do j=1,lorder-1            
+          call nek_z2ri(vxlagp(1,j,1),vxlagp(1,j,2),cA(i),ntot)
+          call col2(vxlagp(1,j,1),MATF_MSK(i),ntot)      ! real
+          call col2(vxlagp(1,j,2),MATF_MSK(i),ntot)      ! imaginary
+          i=i+ntot
+        enddo          
+
+        do j=1,lorder-1            
+          call nek_z2ri(vylagp(1,j,1),vylagp(1,j,2),cA(i),ntot)
+          call col2(vylagp(1,j,1),MATF_MSK(i),ntot)      ! real
+          call col2(vylagp(1,j,2),MATF_MSK(i),ntot)      ! imaginary
+          i=i+ntot
+        enddo          
+
+        if (if3d) then
+          do j=1,lorder-1            
+            call nek_z2ri(vzlagp(1,j,1),vzlagp(1,j,2),cA(i),ntot)
+            call col2(vzlagp(1,j,1),MATF_MSK(i),ntot)      ! real
+            call col2(vzlagp(1,j,2),MATF_MSK(i),ntot)      ! imaginary
+            i=i+ntot
+          enddo          
+        endif
+      endif       ! vlag0.gt.0 
+           
+      if ((prlag0.gt.0).and.(matf_ifpr)) then
+        do j=1,lorder2        
+          call nek_z2ri(prlagp(1,j,1),prlagp(1,j,2),cA(i),ntotp)
+          call col2(prlagp(1,j,1),MATF_MSK(i),ntotp)    ! real
+          call col2(prlagp(1,j,2),MATF_MSK(i),ntotp)    ! imaginary
+          i=i+ntotp
+        enddo          
+      endif       ! prlag0.gt.0
+
+      if (exlag0.gt.0) then
+        call nek_z2ri(exx1p(1,1),exx1p(1,2),MATF_Ax(i),ntot)
+        i=i+ntot
+        call nek_z2ri(exx2p(1,1),exx2p(1,2),MATF_Ax(i),ntot)
+        i=i+ntot
+
+        call nek_z2ri(exy1p(1,1),exy1p(1,2),MATF_Ax(i),ntot)
+        i=i+ntot
+        call nek_z2ri(exy2p(1,1),exy2p(1,2),MATF_Ax(i),ntot)
+        i=i+ntot
+
+        if (if3d) then
+          call nek_z2ri(exz1p(1,1),exz1p(1,2),MATF_Ax(i),ntot)
+          i=i+ntot
+          call nek_z2ri(exz2p(1,1),exz2p(1,2),MATF_Ax(i),ntot)
+          i=i+ntot
+        endif
+      endif       ! exlag.eq.0        
+     
 
       return
       end subroutine MATF_SETFLDS
@@ -474,9 +611,12 @@ c-----------------------------------------------------------------------
       include 'INPUT'
       include 'MATFCN'
 
-      integer i,ntot,ntotp
-      
+      integer i,j,ntot,ntotp
+      integer nlag,nlagp
+
       ntot=nx1*ny1*nz1*nelv
+      ntotp=nx2*ny2*nz2*nelv
+
       i=1
       call copy(MATF_ArWt(i),BM1,ntot)
       i=i+ntot
@@ -488,15 +628,92 @@ c-----------------------------------------------------------------------
       endif
       
       if (matf_ifpr) then
-        ntotp=nx2*ny2*nz2*nelv
 !       If we use the semi-norm then
 !       weight of pressure is zero        
         call rzero(MATF_ArWt(i),ntotp)
         i=i+ntotp
-      endif  
+      endif
+
+      if (vlag0.gt.0) then
+        if (lagwt) then            
+          nlag = ntot*(lorder-1)
+          call copy(MATF_ArWt(i),BM1,nlag)
+          i=i+nlag
+          call copy(MATF_ArWt(i),BM1,nlag)
+          i=i+nlag
+          if (if3d) then
+            call copy(MATF_ArWt(i),BM1,nlag)
+            i=i+nlag
+          endif
+        else
+          nlag = ntot*(lorder-1)
+          call rzero(MATF_ArWt(i),nlag)
+          i=i+nlag
+          call rzero(MATF_ArWt(i),nlag)
+          i=i+nlag
+          if (if3d) then
+            call rzero(MATF_ArWt(i),nlag)
+            i=i+nlag
+          endif
+        endif     ! lagwt
+      endif        
+           
+      if ((prlag0.gt.0).and.(matf_ifpr)) then
+        nlagp=ntotp*lorder2
+        call rzero(MATF_ArWt(i),nlagp)
+        i=i+ntotp
+      endif        
+
+      if (exlag0.gt.0) then
+        if (lagwt) then            
+          do j=1,2            
+            call copy(MATF_ArWt(i),BM1,ntot)
+            i=i+ntot
+          enddo
+
+          do j=1,2            
+            call copy(MATF_ArWt(i),BM1,ntot)
+            i=i+ntot
+          enddo
+       
+          if (if3d) then
+            do j=1,2            
+              call copy(MATF_ArWt(i),BM1,ntot)
+              i=i+ntot
+            enddo
+          endif
+        else
+          do j=1,2            
+            call rzero(MATF_ArWt(i),ntot)
+            i=i+ntot
+          enddo
+
+          do j=1,2            
+            call rzero(MATF_ArWt(i),ntot)
+            i=i+ntot
+          enddo
+       
+          if (if3d) then
+            do j=1,2            
+              call rzero(MATF_ArWt(i),ntot)
+              i=i+ntot
+            enddo
+          endif
+        endif     ! lagwt 
+      endif       ! if exlag0.gt.0 
+
 
 !     Size of krylov vector
       vlen = i-1
+
+!     Check vector length      
+      if (vlen.gt.qlen0) then
+        if (nid.eq.0) then
+          write(6,*) 'Inconsistent Arnoldi Vector Length',
+     $      vlen,qlen0
+        endif
+        call exitt
+      endif        
 
       return
       end subroutine SET_MATF_WEIGHT
@@ -516,9 +733,14 @@ c-----------------------------------------------------------------------
       include 'INPUT'
       include 'MATFCN'
 
-      integer i,ntot,ntotp
-      
+      integer i,j,ntot,ntotp
+      integer nlag,nlagp
+
       ntot=nx1*ny1*nz1*nelv
+      ntotp=nx2*ny2*nz2*nelv
+      nlag = ntot*(lorder-1)
+      nlagp=ntotp*lorder2
+
       i=1
       call rone(MATF_ArWt(i),ntot)
       i=i+ntot
@@ -530,13 +752,79 @@ c-----------------------------------------------------------------------
       endif
 
       if (matf_ifpr) then
-        ntotp=nx2*ny2*nz2*nelv
 !       If we use the semi-norm then
 !       weight of pressure is zero        
         call rzero(MATF_ArWt(i),ntotp)
-       
         i=i+ntotp
       endif  
+
+      if (vlag0.gt.0) then
+        if (lagwt) then            
+          call rone(MATF_ArWt(i),nlag)
+          i=i+nlag
+          call rone(MATF_ArWt(i),nlag)
+          i=i+nlag
+          if (if3d) then
+            call rone(MATF_ArWt(i),nlag)
+            i=i+nlag
+          endif
+        else
+          nlag = ntot*(lorder-1)
+          call rzero(MATF_ArWt(i),nlag)
+          i=i+nlag
+          call rzero(MATF_ArWt(i),nlag)
+          i=i+nlag
+          if (if3d) then
+            call rzero(MATF_ArWt(i),nlag)
+            i=i+nlag
+          endif
+        endif     ! lagwt
+      endif        
+           
+      if ((prlag0.gt.0).and.(matf_ifpr)) then
+        call rzero(MATF_ArWt(i),nlagp)
+        i=i+ntotp
+      endif 
+
+      if (exlag0.gt.0) then
+        if (lagwt) then            
+          do j=1,2            
+            call rone(MATF_ArWt(i),ntot)
+            i=i+ntot
+          enddo
+
+          do j=1,2            
+            call rone(MATF_ArWt(i),ntot)
+            i=i+ntot
+          enddo
+       
+          if (if3d) then
+            do j=1,2            
+              call rone(MATF_ArWt(i),ntot)
+              i=i+ntot
+            enddo
+          endif
+        else
+          do j=1,2            
+            call rzero(MATF_ArWt(i),ntot)
+            i=i+ntot
+          enddo
+
+          do j=1,2            
+            call rzero(MATF_ArWt(i),ntot)
+            i=i+ntot
+          enddo
+       
+          if (if3d) then
+            do j=1,2            
+              call rzero(MATF_ArWt(i),ntot)
+              i=i+ntot
+            enddo
+          endif
+        endif     ! lagwt 
+      endif       ! if exlag0.gt.0 
+
+
 
 !     Arnoldi Vector length
       vlen = i-1
@@ -572,8 +860,8 @@ c-----------------------------------------------------------------------
 
 !      call MATF_QORTHO_CHK 
 
-      istep=0
-      time=0.
+!      istep=0
+!      time=0.
 
 !     set vxp,psi etc from Ax
       call MATF_SETFLDS(MATF_Ax)

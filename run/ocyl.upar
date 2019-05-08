@@ -91,7 +91,7 @@
  MATF_UZAWA =F,
  NGS        =1, 
  NORTHO     =90,
- SSTEP      =10,
+ SSTEP      =1,
  INISTEP    =500,
  matf_omega =0.5,
 /

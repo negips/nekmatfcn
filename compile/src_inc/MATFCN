@@ -11,11 +11,25 @@
       integer vlen0,prlen0,tlen0,fsilen0
       parameter (vlen0   = lx1*ly1*lz1*lelv*ldim)
       parameter (prlen0  = lx2*ly2*lz2*lelv)
-      parameter (tlen0   = lx1*ly1*lz1*lelv*0)
-      parameter (fsilen0 = 0)
+      parameter (tlen0   = lx1*ly1*lz1*lelv*0)  ! Not added yet
+      parameter (fsilen0 = 0)       ! Not added yet
+
+      integer iflag
+      parameter (iflag=1)
+      
+      integer vlag0,prlag0,tlag0,fsilag0,exlag0
+      parameter (vlag0   = iflag*vlen0*2)
+      parameter (prlag0  = iflag*prlen0*1)
+      parameter (tlag0   = iflag*tlen0*2)
+      parameter (fsilag0 = iflag*fsilen0*2)
+      parameter (exlag0  = iflag*vlen0*2)
+
+      logical lagwt             ! If we want to use the lagarrays in the
+      parameter (lagwt=.false.) ! in the calculation of the inner product.
 
       integer qlen0
-      parameter (qlen0 = vlen0 + prlen0 + tlen0 + fsilen0)
+      parameter (qlen0 = vlen0 + prlen0 + tlen0 + fsilen0 +
+     $                   vlag0 + prlag0 + tlag0 + fsilag0 + exlag0)
 
 
 !     Arnoldi Krylov sub-space
