@@ -219,15 +219,9 @@ c-----------------------------------------------------------------------
 
       real Omega
 
-!!     Hard-coding parameters for now
-!      ifmatf = .true.
-!      matf_ifpr = .true.
-!      matf_uzawa = .false.
-!       
-!      ngs=1        ! no of Gram-Schmidt Orthogonalizations
-!      northo=90    ! no of Krylov vectors to save
-!      sstep=100    ! no of iterations between Re-Ortho
-!      Omega = 0.5  ! Angular frequency of Forcing
+
+      if (istep.eq.0) call outpost(vx,vy,vz,pr,t,'  ')
+      if (istep.eq.0) time=0.
 
       call opzero(wx,wy,wz)
 

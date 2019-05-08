@@ -688,7 +688,7 @@ c-----------------------------------------------------------------------
 
       real resid
       real lntol
-      parameter (lntol=1.0e-10)
+      parameter (lntol=1.0e-6)
 
 
 !     Evaluate approximate matrix function
@@ -728,7 +728,8 @@ c-----------------------------------------------------------------------
         n=nkryl-1
         incx = 1
         incy = 1
-!       Overwrite Ax        
+!       Overwrite Ax
+!       Ax = Q*f(H)*||b|| 
         call zgemv(trans,m,n,alpha,MATF_Q,lda,MATF_HWK,
      $                  incx,beta,MATF_Ax,incy)
 
@@ -751,9 +752,9 @@ c-----------------------------------------------------------------------
       include 'MATFCN'
 
       integer i,j,igs
-      complex hj(mfnkryl1)
-      complex gj(mfnkryl1)
-      complex wkh(mfnkryl1)
+      complex hj(gmrkryl1)
+      complex gj(gmrkryl1)
+      complex wkh(gmrkryl1)
 
 !     ZGEMV parameters
       character trans*1
@@ -829,7 +830,7 @@ c-----------------------------------------------------------------------
 !     Normalize vector 
       call nek_zcmult(MATF_Ax,1./beta,vlen)
 
-      gmr_nkryl= gmr_nkryl + 1
+      gmr_nkryl = gmr_nkryl + 1
 
 !     Update Outer Orthogonal matrix
       call nek_zcopy(GMR_Q(1,gmr_nkryl),MATF_Ax,vlen)

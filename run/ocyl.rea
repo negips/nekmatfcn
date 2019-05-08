@@ -13,7 +13,7 @@
     0.000000e+00  P009  -               [Not in use. CPFLD(2,3)=PARAM(9)]
     0.000000e+00  P010  FINTIME         [Simulation end time if >0]
     5.000000e+05  P011  NSTEP           [Number of time steps]
-   -0.500000e-03  P012  DT              [if <0 dt=|PARAM(12)|. Else dt upper bound]
+   -1.000000e-05  P012  DT              [if <0 dt=|PARAM(12)|. Else dt upper bound]
     0.000000e+00  P013  IOCOMM          [Frequency of communication histories]
     0.000000e+00  P014  IOTIME          [if >0 time interval to dump fld file]
     2.000000e+04  P015  IOSTEP          [No. of time steps between fld dumps]
@@ -22,8 +22,8 @@
     0.000000e+00  P018  GRID            [Not in use]
     0.000000e+00  P019  INTYPE          [Not in use]
     0.000000e+00  P020  NORDER          [Not in use]
-    1.000000e-12  P021  DIVERGENCE      [Tolerance for pressure solver]
-    1.000000e-12  P022  HELMHOLTZ       [Tolerance for velocity solver. Relative if <0]
+    1.000000e-10  P021  DIVERGENCE      [Tolerance for pressure solver]
+    1.000000e-10  P022  HELMHOLTZ       [Tolerance for velocity solver. Relative if <0]
     0.000000e+00  P023  NPSCAL          [No. of passive scalars]
     1.000000e-10  P024  TOLREL          [Relative tol for passive scalars]
     1.000000e-05  P025  TOLABS          [Absolute tol for passive scalars]
@@ -7797,7 +7797,8 @@
  E   10823    478.000000      4.000000      0.000000      0.000000      1.000000
  E   10824   1016.000000      1.000000      0.000000      0.000000      0.000000
   ***** NO THERMAL BOUNDARY CONDITIONS *****
-       0 PRESOLVE/RESTART OPTIONS
+       1 PRESOLVE/RESTART OPTIONS
+ocyl.IC XUP
        7 INITIAL CONDITIONS
 C Default                                                                       
 C Default                                                                       
