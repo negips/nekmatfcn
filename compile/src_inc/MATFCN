@@ -15,7 +15,7 @@
       parameter (fsilen0 = 0)       ! Not added yet
 
       integer iflag
-      parameter (iflag=1)
+      parameter (iflag=0)
       
       integer vlag0,prlag0,tlag0,fsilag0,exlag0
       parameter (vlag0   = iflag*vlen0*2)

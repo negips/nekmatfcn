@@ -26,18 +26,9 @@
       complex wkA(lda,nc)     ! Work array
       complex w(nc)
 
-      integer m,n,k
-      integer ldb,ldc
-
       character fcn*4
 
       logical ifinv
-
-      integer info
-
-!     Variables for zgemm 
-      complex alpha,beta
-      character transA*1,transB*1
 
 !     Complex Schur Decomposition (Double-Precision)
       ldu=lda 
@@ -47,74 +38,14 @@
 
 !     Debugging
 !      call write_zmat(A,lda,nc,nc,'Tri')
-     
 
 !     Calculate Matrix function for a Triangular Matrix
 !     Using Schur-Parlett      
       call MAT_ZFCN_TRI(fA,A,lda,nc,fcn)
 
-!     Copy solution      
-      call nek_zcopy(A,fA,lda*nc)
+!     Multiply by Schur vectors      
+      call SCHURVEC_MULT(fA,U,A,wkA,lda,nc,ifinv)
 
-!     wkA=fA*U^{H}
-      alpha = complex(1.0,0)
-      beta  = complex(0.,0.)
-      transA = 'N'
-      transB = 'C'
-      m=nc
-      n=nc
-      k=nc
-      ldb=lda
-      ldc=lda
-      call zgemm(transA,transB,m,n,k,alpha,fA,lda,U,ldb,beta,wkA,ldc) 
-
-!     fA=U*wkA
-      alpha = complex(1.0,0)
-      beta  = complex(0.,0.)
-      transA = 'N'
-      transB = 'N'
-      m=nc
-      n=nc
-      k=nc
-      ldb=lda
-      ldc=lda
-      call zgemm(transA,transB,m,n,k,alpha,U,lda,wkA,ldb,beta,fA,ldc)
-
-!     Calculate inverse if needed      
-      if (ifinv) then      
-!       Matrix inversion of a Triangular Matrix
-        call ztrtri('U','N',nc,A,lda,info)
-        if (info.ne.0) then
-          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN'
-          call exitt
-        endif
-!       A now contains f(T)^{-1}
-
-!       wkA=A*U^{H}
-        alpha = complex(1.0,0)
-        beta  = complex(0.,0.)
-        transA = 'N'
-        transB = 'C'
-        m=nc
-        n=nc
-        k=nc
-        ldb=lda
-        ldc=lda
-        call zgemm(transA,transB,m,n,k,alpha,A,lda,U,ldb,beta,wkA,ldc) 
-
-!       A=U*wkA
-        alpha = complex(1.0,0)
-        beta  = complex(0.,0.)
-        transA = 'N'
-        transB = 'N'
-        m=nc
-        n=nc
-        k=nc
-        ldb=lda
-        ldc=lda
-        call zgemm(transA,transB,m,n,k,alpha,U,lda,wkA,ldb,beta,A,ldc)
-!       A now contains f(A)^{-1}      
-      endif
 
       return
       end subroutine MAT_ZFCN
@@ -365,10 +296,90 @@
 
       return
       end subroutine nek_z2ri
-!---------------------------------------------------------------------- 
+!----------------------------------------------------------------------
+
+      subroutine SCHURVEC_MULT(fA,U,wk1,wk2,lda,nc,ifinv)
+
+      implicit none
+
+      integer lda,nc
+
+      complex fA(lda,nc) ! f(A). Assuming same shape as A.
+      complex U(lda,nc)
+      complex wk1(lda,nc)     ! Work array
+      complex wk2(lda,nc)
+
+!     Variables for zgemm 
+      complex a1,b1
+      character transA*1,transB*1
+      integer m,n,k
+
+      integer info
+      integer i,j
+
+      logical ifinv
+
+!     Copy solution      
+      call nek_zcopy(wk1,fA,lda*nc)
+
+!     wk2=fA*U^{H}
+      a1 = complex(1.,0.)
+      b1 = complex(0.,0.)
+      transA = 'N'
+      transB = 'C'
+      m=nc
+      n=nc
+      k=nc
+      call zgemm(transA,transB,m,n,k,a1,fA,lda,U,lda,b1,wk2,lda) 
+
+!     fA=U*wk2
+      a1 = complex(1.,0.)
+      b1 = complex(0.,0.)
+      transA = 'N'
+      transB = 'N'
+      m=nc
+      n=nc
+      k=nc
+      call zgemm(transA,transB,m,n,k,a1,U,lda,wk2,lda,b1,fA,lda)
+
+!     Calculate inverse if needed      
+      if (ifinv) then      
+!       Matrix inversion of a Triangular Matrix
+        call ztrtri('U','N',nc,wk1,lda,info)
+        if (info.ne.0) then
+          write(6,*) 'Matrix inversion unsuccesfull in SCHURVEC_MULT'
+          call exitt
+        endif
+!       wk1 now contains f(T)^{-1}
+
+!       wk2=wk1*U^{H}
+        a1 = complex(1.0,0)
+        b1  = complex(0.,0.)
+        transA = 'N'
+        transB = 'C'
+        m=nc
+        n=nc
+        k=nc
+        call zgemm(transA,transB,m,n,k,a1,wk1,lda,U,lda,b1,wk2,lda) 
+
+!       wk1=U*wk2
+        a1 = complex(1.0,0)
+        b1 = complex(0.,0.)
+        transA = 'N'
+        transB = 'N'
+        m=nc
+        n=nc
+        k=nc
+        call zgemm(transA,transB,m,n,k,a1,U,lda,wk2,lda,b1,wk1,lda)
+!       wk1 now contains f(A)^{-1}      
+      endif
+
+      return            
+      end subroutine SCHURVEC_MULT            
+
 !======================================================================
 !     Specialized Algorithms for some functions
-!     Slowly grow this list      
+!     Slowly growing this list      
 !====================================================================== 
       subroutine MAT_ZFCN_LN(fA,A,wkA,lda,nc,pmo,ifinv)
 
@@ -406,15 +417,7 @@
       complex w(nc)
       complex wkA(lda,nc)     ! Work array
 
-      integer nt
-
-!     Variables for zgemm 
-      complex a1,b1
-      character transA*1,transB*1
-      integer m,n,k
-
-      integer info
-      integer i,j
+      integer i
 
       integer nroots
       parameter (nroots=10)    ! No of matrix square roots
@@ -442,72 +445,18 @@
 !      call write_zmat(A,lda,nc,nc,'PdT')
 
 !     Evaluate Pade Approximant
-      call mat_ln_pade(fA,A,lda,nc,pmo)
+      call trimat_ln_pade(fA,A,lda,nc,pmo)
 
 !     Multiply by scalar factor      
       call nek_zrcmult(fA,scal,lda*nc)
 
-!     Copy solution      
-      call nek_zcopy(A,fA,lda*nc)
-
-!     wkA=fA*U^{H}
-      a1 = complex(1.,0.)
-      b1 = complex(0.,0.)
-      transA = 'N'
-      transB = 'C'
-      m=nc
-      n=nc
-      k=nc
-      call zgemm(transA,transB,m,n,k,a1,fA,lda,U,lda,b1,wkA,lda) 
-
-!     fA=U*wkA
-      a1 = complex(1.,0.)
-      b1 = complex(0.,0.)
-      transA = 'N'
-      transB = 'N'
-      m=nc
-      n=nc
-      k=nc
-      call zgemm(transA,transB,m,n,k,a1,U,lda,wkA,lda,b1,fA,lda)
-
-
-!     Calculate inverse if needed      
-      if (ifinv) then      
-!       Matrix inversion of a Triangular Matrix
-        call ztrtri('U','N',nc,A,lda,info)
-        if (info.ne.0) then
-          write(6,*) 'Matrix inversion unsuccesfull in MAT_ZFCN_LN'
-          call exitt
-        endif
-!       A now contains f(T)^{-1}
-
-!       wkA=A*U^{H}
-        a1 = complex(1.0,0)
-        b1  = complex(0.,0.)
-        transA = 'N'
-        transB = 'C'
-        m=nc
-        n=nc
-        k=nc
-        call zgemm(transA,transB,m,n,k,a1,A,lda,U,ldu,b1,wkA,lda) 
-
-!       A=U*wkA
-        a1 = complex(1.0,0)
-        b1 = complex(0.,0.)
-        transA = 'N'
-        transB = 'N'
-        m=nc
-        n=nc
-        k=nc
-        call zgemm(transA,transB,m,n,k,a1,U,lda,wkA,lda,b1,A,lda)
-!       A now contains f(A)^{-1}      
-      endif
-
+!     Multiply by Schur vectors      
+      call SCHURVEC_MULT(fA,U,A,wkA,lda,nc,ifinv)
 
       return
       end subroutine MAT_ZFCN_LN
 !----------------------------------------------------------------------
-      subroutine MAT_LN_PADE(fT,T,lda,nc,pmo)
+      subroutine TRIMAT_LN_PADE(fT,T,lda,nc,pmo)
 
 !     T - Triangular Matrix after Schur decomposition
 !     fT = f(T)            
@@ -612,9 +561,107 @@
       enddo       
 
       return            
-      end subroutine MAT_LN_PADE            
+      end subroutine TRIMAT_LN_PADE            
 
-!====================================================================== 
+!======================================================================
+!======================================================================
+
+      subroutine MAT_ZFCN_SQRT(fA,A,wkA,lda,nc,ifinv)
+
+!     A    = U*T*U^{-1}      ! Schur decomposition             
+!     f(A) = U*f(T)*U^{-1}
+
+!     Calculating Matrix Square root
+!     with Schur decomposition and
+!     Algorithm 6.3 pg 136 in 
+!     Higham (2008) Functions of Matrices - Theory and Computation
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'MFN.inc'
+
+      integer lda       ! leading dimension of A
+      integer ldu       ! leading dimension of U
+      integer nc        ! No of columns (and rows considered)
+
+      integer pmo       ! order of Pade approximant
+      logical ifinv     ! If get inverse (fA)^{-1}
+
+      complex A(lda,nc),U(lda,nc)
+      complex fA(lda,nc) ! f(A). Assuming same shape as A.
+      complex w(nc)
+      complex wkA(lda,nc)     ! Work array
+       
+
+!     Complex Schur Decomposition (Double-Precision)
+      ldu=lda 
+      call wrp_zschur(A,lda,nc,U,ldu,w)
+!     A now contains the Complex Upper-Triangular Matrix
+!     U has the Schur vectors
+
+!     Debugging
+!      call write_zmat(A,lda,nc,nc,'SqT')
+
+!     Square root of upper-triangular matrix      
+      call trimat_sqrt(fA,A,lda,nc) 
+
+!     Multiply by Schur vectors
+      call SCHURVEC_MULT(fA,U,A,wkA,lda,nc,ifinv)
+
+
+
+      return
+      end subroutine MAT_ZFCN_SQRT
+!----------------------------------------------------------------------
+      subroutine TRIMAT_SQRT(fT,T,lda,nc)
+
+!     f(T) = sqrt(T)
+           
+!     Calculating Matrix Square root for a triangular matrix
+!     Algorithm 6.3 pg 136 in 
+!     Higham (2008) Functions of Matrices - Theory and Computation
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'MFN.inc'
+
+      integer lda       ! leading dimension of A
+      integer nc        ! No of columns (and rows considered)
+
+      complex T(lda,nc)
+      complex fT(lda,nc) ! f(A). Assuming same shape as A.
+
+      integer i,j,k
+
+      complex uijk
+
+!     Algorithm 6.3. Higham (2008) Functions of Matrices -
+!     Theory and Computation. pg 136      
+      call nek_zzero(fT,lda*nc)
+      do i=1,nc
+        fT(i,i)=sqrt(T(i,i))
+      enddo        
+      
+      do j=2,nc
+        do i=j-1,1,-1
+          uijk = complex(0.,0.)
+          do k=i+1,j-1
+            uijk=uijk+fT(i,k)*fT(k,j)
+          enddo
+          fT(i,j)=(T(i,j) - uijk)/(fT(i,i) + fT(j,j))
+        enddo
+      enddo        
+
+
+      return
+      end subroutine TRIMAT_SQRT            
+!======================================================================       
+
+
 !----------------------------------------------------------------------
       subroutine write_zmat(A,lda,r,c,nam)
 

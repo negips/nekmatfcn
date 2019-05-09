@@ -153,6 +153,8 @@ c-----------------------------------------------------------------------
 !      ifusermv = .true.  ! define our own mesh velocity
 !      ifstrs = .true.
 
+      param(11) = 0.    ! Just one step
+
       return
       end
 c-----------------------------------------------------------------------
@@ -180,7 +182,7 @@ c-----------------------------------------------------------------------
       parameter (n=10)
       real matA(n,n),matV(n,n)
 
-      complex cA(n,n),cV(n,n),cB(n,n)
+      complex cA(n,n),cB(n,n),cC(n,n),cD(n,n)
       integer pord                          ! Pade Order
 
       integer seed
@@ -194,12 +196,16 @@ c-----------------------------------------------------------------------
 
       if (istep.eq.0) then
 
-        call rzero(matA,m)
         seed = 86458
         call srand(seed)
 
+        call rzero(matA,n*n)
+
         call nek_zzero(cA,n*n)
         call nek_zzero(cB,n*n)
+        call nek_zzero(cC,n*n)
+        call nek_zzero(cD,n*n)
+        
 
         do i=1,m
         do j=1,m
@@ -214,13 +220,16 @@ c-----------------------------------------------------------------------
         call write_zmat(cA,n,m,m,'Ain')
 
         ifinv = .true.
-        call MAT_ZFCN(cV,cA,n,m,'loge',ifinv)
+        call MAT_ZFCN(cC,cA,cD,n,m,'sqrt',ifinv)
 
-        call write_zmat(cV,n,m,m,'fAo')
+        call write_zmat(cC,n,m,m,'fAo')
 
+!        write(6,*) ' '
+!        call write_zmat(cB,n,m,m,'Ain')
+       
         pord = 16
-        call MAT_ZFCN_LN(cV,cB,n,m,pord,ifinv) 
-        call write_zmat(cV,n,m,m,'Pde')
+        call MAT_ZFCN_SQRT(cC,cB,cD,n,m,ifinv) 
+        call write_zmat(cC,n,m,m,'Sqr')
       
 
       endif
