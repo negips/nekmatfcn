@@ -674,7 +674,12 @@
 
       implicit none
 
+      integer lda,nc
+      integer p
 
+      complex A(lda,nc)
+      complex wk1(lda,nc)
+      complex wk2(lda,nc)
 
 
       return
