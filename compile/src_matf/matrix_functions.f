@@ -114,6 +114,85 @@
             
       end function ZFCN
 !----------------------------------------------------------------------
+      subroutine SCHURVEC_MULT(fA,U,wk1,wk2,lda,nc,ifinv)
+
+      implicit none
+
+      integer lda,nc
+
+      complex fA(lda,nc) ! f(A). Assuming same shape as A.
+      complex U(lda,nc)
+      complex wk1(lda,nc)     ! Work array
+      complex wk2(lda,nc)
+
+!     Variables for zgemm 
+      complex a1,b1
+      character transA*1,transB*1
+      integer m,n,k
+
+      integer info
+      integer i,j
+
+      logical ifinv
+
+!     Copy solution      
+      call nek_zcopy(wk1,fA,lda*nc)
+
+!     wk2=fA*U^{H}
+      a1 = complex(1.,0.)
+      b1 = complex(0.,0.)
+      transA = 'N'
+      transB = 'C'
+      m=nc
+      n=nc
+      k=nc
+      call zgemm(transA,transB,m,n,k,a1,fA,lda,U,lda,b1,wk2,lda) 
+
+!     fA=U*wk2
+      a1 = complex(1.,0.)
+      b1 = complex(0.,0.)
+      transA = 'N'
+      transB = 'N'
+      m=nc
+      n=nc
+      k=nc
+      call zgemm(transA,transB,m,n,k,a1,U,lda,wk2,lda,b1,fA,lda)
+
+!     Calculate inverse if needed      
+      if (ifinv) then      
+!       Matrix inversion of a Triangular Matrix
+        call ztrtri('U','N',nc,wk1,lda,info)
+        if (info.ne.0) then
+          write(6,*) 'Matrix inversion unsuccesfull in SCHURVEC_MULT'
+          call exitt
+        endif
+!       wk1 now contains f(T)^{-1}
+
+!       wk2=wk1*U^{H}
+        a1 = complex(1.0,0)
+        b1  = complex(0.,0.)
+        transA = 'N'
+        transB = 'C'
+        m=nc
+        n=nc
+        k=nc
+        call zgemm(transA,transB,m,n,k,a1,wk1,lda,U,lda,b1,wk2,lda) 
+
+!       wk1=U*wk2
+        a1 = complex(1.0,0)
+        b1 = complex(0.,0.)
+        transA = 'N'
+        transB = 'N'
+        m=nc
+        n=nc
+        k=nc
+        call zgemm(transA,transB,m,n,k,a1,U,lda,wk2,lda,b1,wk1,lda)
+!       wk1 now contains f(A)^{-1}      
+      endif
+
+      return            
+      end subroutine SCHURVEC_MULT            
+!----------------------------------------------------------------------
      
       subroutine nek_zzero(x,n)
 
@@ -297,86 +376,6 @@
       return
       end subroutine nek_z2ri
 !----------------------------------------------------------------------
-
-      subroutine SCHURVEC_MULT(fA,U,wk1,wk2,lda,nc,ifinv)
-
-      implicit none
-
-      integer lda,nc
-
-      complex fA(lda,nc) ! f(A). Assuming same shape as A.
-      complex U(lda,nc)
-      complex wk1(lda,nc)     ! Work array
-      complex wk2(lda,nc)
-
-!     Variables for zgemm 
-      complex a1,b1
-      character transA*1,transB*1
-      integer m,n,k
-
-      integer info
-      integer i,j
-
-      logical ifinv
-
-!     Copy solution      
-      call nek_zcopy(wk1,fA,lda*nc)
-
-!     wk2=fA*U^{H}
-      a1 = complex(1.,0.)
-      b1 = complex(0.,0.)
-      transA = 'N'
-      transB = 'C'
-      m=nc
-      n=nc
-      k=nc
-      call zgemm(transA,transB,m,n,k,a1,fA,lda,U,lda,b1,wk2,lda) 
-
-!     fA=U*wk2
-      a1 = complex(1.,0.)
-      b1 = complex(0.,0.)
-      transA = 'N'
-      transB = 'N'
-      m=nc
-      n=nc
-      k=nc
-      call zgemm(transA,transB,m,n,k,a1,U,lda,wk2,lda,b1,fA,lda)
-
-!     Calculate inverse if needed      
-      if (ifinv) then      
-!       Matrix inversion of a Triangular Matrix
-        call ztrtri('U','N',nc,wk1,lda,info)
-        if (info.ne.0) then
-          write(6,*) 'Matrix inversion unsuccesfull in SCHURVEC_MULT'
-          call exitt
-        endif
-!       wk1 now contains f(T)^{-1}
-
-!       wk2=wk1*U^{H}
-        a1 = complex(1.0,0)
-        b1  = complex(0.,0.)
-        transA = 'N'
-        transB = 'C'
-        m=nc
-        n=nc
-        k=nc
-        call zgemm(transA,transB,m,n,k,a1,wk1,lda,U,lda,b1,wk2,lda) 
-
-!       wk1=U*wk2
-        a1 = complex(1.0,0)
-        b1 = complex(0.,0.)
-        transA = 'N'
-        transB = 'N'
-        m=nc
-        n=nc
-        k=nc
-        call zgemm(transA,transB,m,n,k,a1,U,lda,wk2,lda,b1,wk1,lda)
-!       wk1 now contains f(A)^{-1}      
-      endif
-
-      return            
-      end subroutine SCHURVEC_MULT            
-
 !======================================================================
 !     Specialized Algorithms for some functions
 !     Slowly growing this list      
@@ -390,14 +389,8 @@
 !     with Schur decomposition and
 !     partial fraction Pade Approximant.
 
-!     A = (I+X)
-!                         m            
-!     Log(I+X) = r_{m} = Sum    w_{i}*X
-!                        i=1  --------------
-!                             I + x_{i}*X
-
-!     w_{i} - Weights of m point Gauss-Legendre Quadrature
-!     x_{i}  - Nodes of m point Gauss-Legendre Quadrature in [0,1]            
+!     Algorithm 4.1 in Al-Mohy & Higham (2012) Improved Inverse 
+!     Scaling and Squaring Algorithms for the Matrix Logarithm
 
       implicit none
 
@@ -417,6 +410,8 @@
       complex w(nc)
       complex wkA(lda,nc)     ! Work array
 
+      complex D(mfnkryl1)     ! Diagonal elements
+
       integer i
 
       integer nroots
@@ -424,6 +419,14 @@
       real scal
       character fcn*4
       logical ifinv2
+
+      real theta(16)
+      parameter (theta(1)=1.59e-5, theta(2)=2.31e-3, theta(3)=1.94e-2,
+     $          theta(4) =6.21e-2, theta(5)=1.28e-1, theta(6)=2.06e-1,
+     $          theta(7) =2.88e-1, theta(8)=3.67e-1, theta(9)=4.39e-1,
+     $          theta(10)=5.03e-1,theta(11)=5.60e-1,theta(12)=6.09e-1,
+     $          theta(13)=6.52e-1,theta(14)=6.89e-1,theta(15)=7.21e-1,
+     $          theta(16)=7.49e-1)
        
 
 !     Complex Schur Decomposition (Double-Precision)
@@ -431,6 +434,11 @@
       call wrp_zschur(A,lda,nc,U,ldu,w)
 !     A now contains the Complex Upper-Triangular Matrix
 !     U has the Schur vectors
+
+      call nek_zzero(D,mfnkryl1)
+      do i=1,nc
+        D(i)=A(i,i)
+      enddo        
 
 !     Matrix Square roots      
       scal = 2.**nroots
@@ -660,8 +668,17 @@
       return
       end subroutine TRIMAT_SQRT            
 !======================================================================       
+!---------------------------------------------------------------------- 
+
+      subroutine MATF_ALPHAP(A,wk1,wk2,lda,nc,p)
+
+      implicit none
 
 
+
+
+      return
+      end subroutine MATF_ALPHAP
 !----------------------------------------------------------------------
       subroutine write_zmat(A,lda,r,c,nam)
 
@@ -692,7 +709,7 @@
 
 c-----------------------------------------------------------------------
 
-
+      
 
 
 
