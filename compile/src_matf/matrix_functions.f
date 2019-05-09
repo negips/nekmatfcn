@@ -389,9 +389,9 @@
 !     with Schur decomposition and
 !     partial fraction Pade Approximant.
 
-!     Algorithm 4.1 in Al-Mohy & Higham (2012) Improved Inverse 
-!     Scaling and Squaring Algorithms for the Matrix Logarithm
-
+!     Algorithm 11.9, pp 277-278 in Higham (2008) Functions of Matrices
+!     - Theory and Computation
+           
       implicit none
 
       include 'SIZE_DEF'
@@ -403,31 +403,54 @@
       integer nc        ! No of columns (and rows considered)
 
       integer pmo       ! order of Pade approximant
+      integer pm
       logical ifinv     ! If get inverse (fA)^{-1}
 
       complex A(lda,nc),U(lda,nc)
       complex fA(lda,nc) ! f(A). Assuming same shape as A.
       complex w(nc)
       complex wkA(lda,nc)     ! Work array
+      complex wk2(mfnkryl1,mfnkryl1)     ! Work array
 
-      complex D(mfnkryl1)     ! Diagonal elements
+      complex eye(mfnkryl1,mfnkryl1)      ! identity
 
       integer i
 
-      integer nroots
-      parameter (nroots=10)    ! No of matrix square roots
-      real scal
+      integer maxroots
+      integer nroots          ! No of square roots taken
+      real scal               ! 2^{nroots}
+
+      real zlange       ! LAPACK. 1 norm
+      real tau
+      character norm*1
+      real wkNorm(mfnkryl1)   ! not referenced for 1 norm
+
       character fcn*4
-      logical ifinv2
 
       real theta(16)
-      parameter (theta(1)=1.59e-5, theta(2)=2.31e-3, theta(3)=1.94e-2,
-     $          theta(4) =6.21e-2, theta(5)=1.28e-1, theta(6)=2.06e-1,
-     $          theta(7) =2.88e-1, theta(8)=3.67e-1, theta(9)=4.39e-1,
-     $          theta(10)=5.03e-1,theta(11)=5.60e-1,theta(12)=6.09e-1,
-     $          theta(13)=6.52e-1,theta(14)=6.89e-1,theta(15)=7.21e-1,
-     $          theta(16)=7.49e-1)
+
+!     These are the reference values from the book Higham (2008).
+!     They are based on the forward error propagation analysis and
+!     matrix norm ||X||
+      parameter (theta = [1.10e-5, 1.82e-3, 1.62e-2, 5.39e-2,1.14e-1,
+     $                      1.87e-1, 2.64e-1, 3.40e-1, 4.11e-1, 4.75e-1,
+     $                      5.31e-1, 5.81e-1, 6.24e-1, 6.62e-1, 6.95e-1,
+     $                      7.24e-1])
+
+!!     These are the reference values from the paper 
+!      Al-Mohy & Higham (2012) Improved Inverse Scaling and Squaring 
+!      Algorithms for the Matrix Logarithm. They are based on the 
+!      backward error propagation analysis and the norm ||X^{p}||^{1/p}
+!      parameter (theta= [1.59e-5, 2.31e-3, 1.94e-2, 6.21e-2,
+!     $                   1.28e-1, 2.06e-1, 2.88e-1, 3.67e-1, 
+!     $                   4.39e-1, 5.03e-1, 5.60e-1, 6.09e-1,
+!     $                   6.52e-1, 6.89e-1, 7.21e-1, 7.49e-1])
        
+
+      if (pmo.gt.16) then
+        if (nid.eq.0) write(6,*) 'Setting Pade Order to 16'
+        pmo=16
+      endif        
 
 !     Complex Schur Decomposition (Double-Precision)
       ldu=lda 
@@ -435,31 +458,79 @@
 !     A now contains the Complex Upper-Triangular Matrix
 !     U has the Schur vectors
 
-      call nek_zzero(D,mfnkryl1)
-      do i=1,nc
-        D(i)=A(i,i)
-      enddo        
+!!     Debugging      
+!      call write_zmat(A,lda,nc,nc,'Tri')
 
-!     Matrix Square roots      
-      scal = 2.**nroots
-      do i=1,nroots
-        fcn = 'sqrt'
-        ifinv2 = .false.
-        call MAT_ZFCN(fA,A,wkA,lda,nc,fcn,ifinv2)
-        call nek_zcopy(A,fA,lda*nc)
+!     make a copy      
+      call nek_zcopy(wkA,A,lda*nc)
+
+!     Complex Identity matrix 
+      call nek_zzero(eye,mfnkryl1*mfnkryl1)
+      do i=1,nc
+        eye(i,i) = complex(1.0,0)
+      enddo 
+
+      do i=1,nc
+        wkA(i,i)   = A(i,i)-eye(i,i)
       enddo
 
-!     Debugging
-!      call write_zmat(A,lda,nc,nc,'PdT')
+!!     Debugging      
+!      call write_zmat(wkA,lda,nc,nc,'wkA')
+
+
+!     Find the ||A-I||_{1}
+      norm = 'F'
+      tau  = zlange(norm,nc,nc,wkA,lda,wkNorm)
+
+      if (nid.eq.0) then
+        write(6,'(A16,1x,E25.16E2)') 'Matrix Log norm:',tau
+!        write(6,*) theta
+      endif        
+
+!     If the norm is already small
+      pm = pmo 
+      do i=1,pmo
+        if (tau.lt.theta(i)) then
+          pm=i
+          exit
+        endif
+      enddo 
+
+!     Matrix Square roots
+      nroots = 0
+      norm   = '1'
+      maxroots = 30
+      do while (tau.ge.theta(pm).and.nroots.le.maxroots)
+
+        call TRIMAT_SQRT(fA,A,lda,nc)
+        nroots = nroots+1
+        call nek_zcopy(A,fA,lda*nc)
+        call nek_zcopy(wkA,A,lda*nc)
+        do i=1,nc
+          wkA(i,i) = A(i,i)-eye(i,i)
+        enddo
+
+!       Find the ||A-I||_{1}
+        tau  = zlange(norm,nc,nc,wkA,lda,wkNorm)
+
+      enddo
+      scal = 2.**nroots
+      if (nid.eq.0) then
+        write(6,'(A22,1x,I3,1x,2(E25.16E2,1x))') 'k,||T^{1/k}||,theta_k'
+     $    ,nroots,tau,theta(pm)
+      endif        
 
 !     Evaluate Pade Approximant
       call trimat_ln_pade(fA,A,lda,nc,pmo)
 
+!     Multiply by Schur vectors
+!     fA = U*fA*U^{H}
+!     ifinv=.true. : A = U*A^{-1}*U^{H}
+      call SCHURVEC_MULT(fA,U,A,wkA,lda,nc,ifinv)
+
 !     Multiply by scalar factor      
       call nek_zrcmult(fA,scal,lda*nc)
-
-!     Multiply by Schur vectors      
-      call SCHURVEC_MULT(fA,U,A,wkA,lda,nc,ifinv)
+     
 
       return
       end subroutine MAT_ZFCN_LN
@@ -714,7 +785,49 @@
 
 c-----------------------------------------------------------------------
 
+      subroutine fwrite_zmat(A,lda,r,c,nam)
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+
+      integer lda,r,c
+      complex A(lda,c)
+      character outfmt*38
+      character nam*3
+      character fname*6
+
+      logical ifexist
+
+      integer i,j
+
+      call blank(outfmt,38)
+      write(outfmt,'(A1,I3.3,A27)') '(',c,
+     $                '(E25.16E2,1x,E25.16E2,1x))'
+
+      i=0
+      ifexist=.true.
+      do while (ifexist)
+        i=i+1
+        write(fname,'(A3,I3.3)') nam,i
+        inquire(file=fname,exist=ifexist)
+      enddo 
       
+      if (nid.eq.0) then
+        open(unit=121,file=fname,form='formatted',status='new')
+        do i=1,r
+          write(121,outfmt) (real(A(i,j)),imag(A(i,j)),j=1,c)
+        enddo
+        close(121)
+      endif
+
+
+      return
+      end subroutine fwrite_zmat
+
+c-----------------------------------------------------------------------
+     
 
 
 

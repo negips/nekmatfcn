@@ -860,8 +860,8 @@ c-----------------------------------------------------------------------
 
 !      call MATF_QORTHO_CHK 
 
-!      istep=0
-!      time=0.
+      istep=0
+      time=0.
 
 !     set vxp,psi etc from Ax
       call MATF_SETFLDS(MATF_Ax)
@@ -978,15 +978,20 @@ c-----------------------------------------------------------------------
       nc  = nkryl-1
       fcn = 'loge'
       ifinv = .false.
-      pmo = 16
+      pmo = 12
       call nek_zcopy(MATF_HINV,MATF_HS,lda*nc)
+
+!     Debugging      
+      call fwrite_zmat(MATF_HINV,mfnkryl1,nc,nc,'Hes')      
 
       call MAT_ZFCN_LN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,pmo,ifinv)
 !      call MAT_ZFCN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,fcn,ifinv)
 
-!      call write_zmat(MATF_HWK,mfnkryl1,nc,nc,'Hes')      
-
       resid = abs(MATF_HWK(nc,1))
+
+!     Debugging      
+      call fwrite_zmat(MATF_HWK,mfnkryl1,nc,nc,'LnA') 
+
 
       if (nid.eq.0) then
 !       This is the weight of the new vector

@@ -220,16 +220,16 @@ c-----------------------------------------------------------------------
         call write_zmat(cA,n,m,m,'Ain')
 
         ifinv = .true.
-        call MAT_ZFCN(cC,cA,cD,n,m,'sqrt',ifinv)
+        call MAT_ZFCN(cC,cA,cD,n,m,'loge',ifinv)
 
         call write_zmat(cC,n,m,m,'fAo')
 
-!        write(6,*) ' '
-!        call write_zmat(cB,n,m,m,'Ain')
+        write(6,*) ' '
+        call write_zmat(cB,n,m,m,'Ain')
        
-        pord = 16
-        call MAT_ZFCN_SQRT(cC,cB,cD,n,m,ifinv) 
-        call write_zmat(cC,n,m,m,'Sqr')
+        pord = 10
+        call MAT_ZFCN_LN(cC,cB,cD,n,m,pord,ifinv) 
+        call write_zmat(cC,n,m,m,'Pde')
       
 
       endif
