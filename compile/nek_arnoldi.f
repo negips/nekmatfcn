@@ -153,6 +153,7 @@ c-----------------------------------------------------------------------
       hessen(i+1,i)=beta
       
       call outhessen
+!      call outfile_hessen
 
 !     Add unit vector to Qortho
       call cmult(Ax,1./beta,narn_vlen)
@@ -665,7 +666,7 @@ c-----------------------------------------------------------------------
 
       ntot = nx1*ny1*nz1*nelv
 
-      call outfile_hessen
+!      call outfile_hessen
       if (narn_ifpr) then
         do i=1,narn_nkryl
           call outpost(Qortho(1,i),Qortho(1+ntot,i),
@@ -694,15 +695,29 @@ c-----------------------------------------------------------------------
 
       character outfmt*64
       integer i,j
+      logical ifexist
+      character fname*13
 
       call blank(outfmt,64)
       write(outfmt,'(A1,I5,A14)') '(',narn_northo,'(E25.16E3,1x))'
 
+!      call blank(outfmt,38)
+!      write(outfmt,'(A1,I3.3,A14)') '(',narn_northo,
+!     $                '(E25.16E3,1x))'
+
+      i=0
+      ifexist=.true.
+      do while (ifexist)
+        i=i+1
+        write(fname,'(A10,I3.3)') 'hessenberg',i
+        inquire(file=fname,exist=ifexist)
+      enddo 
+
       if (nid.eq.0) then
-        open(unit=10101,file='hessenberg',status='unknown',
+        open(unit=10101,file=fname,status='unknown',
      $      form='formatted')
-        do i=1,narn_northo+1
-          write(10101,outfmt) (hessen(i,j),j=1,narn_northo)
+        do i=1,narn_nkryl+1
+          write(10101,outfmt) (hessen(i,j),j=1,narn_nkryl)
         enddo
         close(10101) 
       endif  

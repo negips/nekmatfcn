@@ -972,6 +972,31 @@ c-----------------------------------------------------------------------
       real lntol
       parameter (lntol=1.0e-8)
 
+!     Debugging. Eigenvalue estimation
+      complex weig(mfnkryl1)
+      complex EVL(mfnkryl1,mfnkryl1)
+      complex EVR(mfnkryl1,mfnkryl1)
+      integer ldvl,ldvr
+
+!     Debugging
+      lda=mfnkryl1
+      nc=nkryl-1 
+      call nek_zcopy(MATF_HINV,MATF_HS,lda*nc)
+
+      nc=nkryl-1 
+      call fwrite_zmat(MATF_HINV,mfnkryl1,nc+1,nc,'Hes')      
+
+!     Debugging      
+!     Estimate Eigenvalues
+      lda=mfnkryl1
+      n  =nkryl-1
+      ldvl=mfnkryl1
+      ldvr=mfnkryl1
+      call wrp_zgeeig(MATF_HINV,lda,n,weig,EVL,ldvl,EVR,ldvr)      
+      call fwrite_zmat(weig,mfnkryl1,n,1,'Eig')      
+
+!     Debugging      
+!      call fwrite_zmat(MATF_HINV,mfnkryl1,nc,nc,'Hes')      
 
 !     Evaluate approximate matrix function
       lda = mfnkryl1
@@ -980,9 +1005,6 @@ c-----------------------------------------------------------------------
       ifinv = .false.
       pmo = 12
       call nek_zcopy(MATF_HINV,MATF_HS,lda*nc)
-
-!     Debugging      
-!      call fwrite_zmat(MATF_HINV,mfnkryl1,nc,nc,'Hes')      
 
       call MAT_ZFCN_LN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,pmo,ifinv)
 !      call MAT_ZFCN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,fcn,ifinv)

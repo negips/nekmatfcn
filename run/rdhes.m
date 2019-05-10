@@ -2,8 +2,9 @@
 
 clear
 clc
+close all
 
-fn = 1:142;
+fn = [39]; %1:142;
 
 for i=fn
   fname = sprintf('%s%3.3i','Hes',i);
@@ -12,11 +13,14 @@ for i=fn
   Ar = ain(:,1:2:c);
   Ai = ain(:,2:2:c);
   A = Ar + 1i*Ai;
+
+  e = eig(A);
+  plot(real(e),imag(e), '.')
   
   fA = logm(A);
   resid(i) = abs(fA(r,1));
 end  
 
-[fn' resid']
-semilogy(resid)
+%[fn' resid']
+%semilogy(resid)
 

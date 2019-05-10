@@ -91,7 +91,7 @@
  MATF_UZAWA =F,
  NGS        =2, 
  NORTHO     =90,
- SSTEP      =500,
+ SSTEP      =5,
  INISTEP    =500,
  matf_omega =0.0,
 /
@@ -101,7 +101,7 @@
  NARN_UZAWA   =F,
  NARN_NGS     =2, 
  NARN_NORTHO  =90,
- NARN_STEP    =500,
+ NARN_STEP    =100,
  NARN_INISTEP =500,
 /
 

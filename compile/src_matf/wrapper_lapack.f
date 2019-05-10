@@ -376,7 +376,7 @@
 
       integer info      ! = 0:  successful exit.
                         ! < 0:  if INFO = -i, the i-th argument had an illegal value.
-                        ! > 0:  DBDSDC did not converge, updating process failed. 
+                        ! > 0:  See Doc for error 
 
       integer m         ! rows of the Matrix A(lda,n)
       integer n         ! Columns of the Matrix A(lda,n)
@@ -429,6 +429,68 @@
       end subroutine wrp_zgeinv
 !----------------------------------------------------------------------       
 
+      subroutine wrp_zgeeig(Amat,lda,n,w,VL,ldvl,VR,ldvr)
+
+!     LAPACK interface for Eigenpair decomposition of a complex matrix.
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'WRP_LAPACK'
+
+      character jobvl*1 ! = 'N': Left eigenvectors are not computed
+                        ! = 'V': Compute Left eigenvectors
+
+      character jobvr*1 ! = 'N': Right eigenvectors are not computed
+                        ! = 'V': Compute Right eigenvectors
+
+
+      integer info      ! = 0:  successful exit.
+                        ! < 0:  if INFO = -i, the i-th argument had an illegal value.
+                        ! > 0:  See Doc for error. 
+
+      integer n         ! Order of the Matrix A(lda,n)
+      integer lda       ! leading dimension of the matrix A
+      integer ldvl      ! leading dimension of the matrix VL(ldvl,n)
+      integer ldvr      ! leading dimension of the matrix VR(ldvr,n)
+
+      complex Amat(lda,n)  ! compute eigenpairs of Amat
+      complex VL(ldvl,n)  ! Left Eigenvectors
+      complex VR(ldvr,n)  ! Right Eigenvectors
+     
+      complex w(n)      ! eigenvalues
+
+      
+
+!     Perform LU decomposition
+      jobvl = 'N'
+      jobvr = 'N'
+      call zgeev(jobvl,jobvr,n,Amat,lda,w,VL,ldvl,VR,ldvr,ZEIG_WKC,
+     $           ZEIG_WCL,ZEIG_WKR,info)
+
+!     Error-check
+      if (info.lt.0) then
+        if (nid.eq.0) write(6,*)
+     $       'ERROR: the i:th argment had an illegal value.', abs(info)
+        call exitt
+      elseif (info.gt.0) then
+        if (nid.eq.0) then
+          write(6,*)
+     $     'ERROR: QR algorithm failed to compute all eigenvalues. ',
+     $     'No eigenvectors computed.'          
+     $     ,info
+        endif               
+        call exitt
+      else
+        if (nid.eq.0) write(6,*) 'ZGEEV: successful exit!'
+        if (nid.eq.0) write(6,*) '           Optimal WCL=',
+     $       int(ZEIG_WKC(1)), ZEIG_WCL
+      endif
+
+      return
+      end subroutine wrp_zgeeig
+!----------------------------------------------------------------------       
 
 
 

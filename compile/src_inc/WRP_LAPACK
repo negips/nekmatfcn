@@ -17,17 +17,19 @@ c     Declaration for LAPACK work arrays
 !     SP - Single Precision      
 
       integer SW_LLS
-      parameter (SW_LLS=-1)         ! Linear-Least-Squares (DP)
+      parameter (SW_LLS       =-1)! Linear-Least-Squares (DP)
       integer SW_SVD
-      parameter (SW_SVD=-1)         ! SVD (DP)
+      parameter (SW_SVD       =-1)! SVD (DP)
       integer SW_RSCHUR
-      parameter (SW_RSCHUR=-1)      ! Real Schur Decomposition (DP)
+      parameter (SW_RSCHUR    =-1)! Real Schur Decomposition (DP)
       integer SW_CSCHUR
-      parameter (SW_CSCHUR=-1)      ! Complex Schur Decomposition (SP)
+      parameter (SW_CSCHUR    =-1)! Complex Schur Decomposition (SP)
       integer SW_ZSCHUR
-      parameter (SW_ZSCHUR=1)       ! Complex Schur Decomposition (DP)
+      parameter (SW_ZSCHUR    = 1)! Complex Schur Decomposition (DP)
       integer SW_ZGEINV
-      parameter (SW_ZGEINV=1)       ! Complex Matrix Inversion (DP)
+      parameter (SW_ZGEINV    = 1)! Complex Matrix Inversion (DP)
+      integer SW_ZEIG
+      parameter (SW_ZEIG      = 1)! Eigenpar Decomposition of complex matrix(DP)
 
 
 !---------------------------------------------------------------------- 
@@ -79,7 +81,7 @@ c     Work arrays
       logical RSCHUR_WKB(RSCHUR_WBL)
 
 !---------------------------------------------------------------------- 
-!     Arrays for Complex Schur Decomposition 
+!     Arrays for Single Precision Complex Schur Decomposition 
 
 c     Length of arrays 
       integer CSCHUR_WRL               ! Work Array Size (Real)
@@ -96,7 +98,7 @@ c     Work arrays
       logical     CSCHUR_WKB(CSCHUR_WBL)
 
 !---------------------------------------------------------------------- 
-!     Arrays for Double Complex Schur Decomposition 
+!     Arrays for Double Precision Complex Schur Decomposition 
 
 c     Length of arrays 
       integer ZSCHUR_WRL               ! Work Array Size (Real)
@@ -132,6 +134,24 @@ c     Length of arrays
 c     Work arrays
       complex     ZGEINV_WKC(ZSCHUR_WCL)
       integer     ZGEINV_WKI(ZSCHUR_WBL)  ! IPIV in documentation
+
+!---------------------------------------------------------------------- 
+!     Arrays for Double Precision Eigenpair Decomposition of
+!     a complex matrix      
+
+c     Length of arrays 
+      integer ZEIG_WRL               ! Work Array Size (Real)
+      integer ZEIG_WCL               ! Work Array Size (Complex)
+      
+      parameter (ZEIG_WRL=max(SW_ZEIG*(2*LAPKRYL1),1))
+      parameter (ZEIG_WCL=max(SW_ZEIG*(4*LAPKRYL1),1))
+
+c     Work arrays
+      real        ZEIG_WKR(ZEIG_WRL)
+      complex     ZEIG_WKC(ZEIG_WCL)
+
+!---------------------------------------------------------------------- 
+
 
 !---------------------------------------------------------------------- 
 !     Common Blocks
