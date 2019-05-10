@@ -68,8 +68,9 @@
       common /MATFl/ MATF_UZAWA,IFMATF,MATF_IFPR
 
       real matf_omega         ! Forcing angular frequency
+      real matf_rhsnorm       ! rhs norm
 
-      common /MATFr/ matf_omega
+      common /MATFr/ matf_omega,matf_rhsnorm
 
 !     GMRES variables
 !----------------------------------------------------------------------
