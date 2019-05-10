@@ -4,7 +4,7 @@
 !---------------------------------------------------------------------- 
 
 	integer arnkryl
-	parameter (arnkryl=10)
+	parameter (arnkryl=100)
 
       integer vlen2,prlen2,tlen2,fsilen2
       parameter (vlen2  = lx1*ly1*lz1*lelv*ldim)

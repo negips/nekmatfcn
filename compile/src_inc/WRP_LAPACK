@@ -26,6 +26,8 @@ c     Declaration for LAPACK work arrays
       parameter (SW_CSCHUR=-1)      ! Complex Schur Decomposition (SP)
       integer SW_ZSCHUR
       parameter (SW_ZSCHUR=1)       ! Complex Schur Decomposition (DP)
+      integer SW_ZGEINV
+      parameter (SW_ZGEINV=1)       ! Complex Matrix Inversion (DP)
 
 
 !---------------------------------------------------------------------- 
@@ -110,6 +112,26 @@ c     Work arrays
       real        ZSCHUR_WKR(ZSCHUR_WRL)
       logical     ZSCHUR_WKB(ZSCHUR_WBL)
 
+!---------------------------------------------------------------------- 
+!     Arrays for Double Complex Matrix Inversion
+!     ZGETRF - LU Decomposition
+!     ZGETRI - Inversion after LU decomposition
+
+!     Note: This one uses GMRKRYL1 for Memory size
+
+c     Length of arrays 
+      integer ZGEINV_WCL               ! Work Array Size (Complex)
+      integer ZGEINV_WIL               ! Work Array Size (Integer)
+
+      integer ZGEINV_BKSIZ             ! Block Size. Set Arbitrarily for
+      parameter (ZGEINV_BKSIZ=16)      ! now
+      
+      parameter (ZGEINV_WCL=max(SW_ZGEINV*(ZGEINV_BKSIZ*GMRKRYL1),1))
+      parameter (ZGEINV_WIL=max(SW_ZGEINV*(GMRKRYL1),1))  
+
+c     Work arrays
+      complex     ZGEINV_WKC(ZSCHUR_WCL)
+      integer     ZGEINV_WKI(ZSCHUR_WBL)  ! IPIV in documentation
 
 !---------------------------------------------------------------------- 
 !     Common Blocks

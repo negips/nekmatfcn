@@ -89,11 +89,20 @@
  IFMATF     =T,
  MATF_IFPR  =T,
  MATF_UZAWA =F,
- NGS        =1, 
+ NGS        =2, 
  NORTHO     =90,
- SSTEP      =10,
+ SSTEP      =500,
  INISTEP    =500,
  matf_omega =0.0,
+/
+&NEKARN
+ IFNARN       =F,
+ NARN_IFPR    =T,
+ NARN_UZAWA   =F,
+ NARN_NGS     =2, 
+ NARN_NORTHO  =90,
+ NARN_STEP    =500,
+ NARN_INISTEP =500,
 /
 
 

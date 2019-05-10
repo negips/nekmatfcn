@@ -74,10 +74,6 @@
 !     GMRES variables
 !----------------------------------------------------------------------
 
-      integer gmrkryl,gmrkryl1
-      parameter (gmrkryl=100)
-      parameter (gmrkryl1=gmrkryl+1)
-
 !     GMRES Krylov sub-space
       complex GMR_Q(qlen0,gmrkryl1)      ! Orthogonal Matrix
       complex GMR_HS(gmrkryl1,gmrkryl)   ! Hessenberg Matrix

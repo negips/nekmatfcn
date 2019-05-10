@@ -5,22 +5,32 @@
 
       include 'ARN.inc'
 
-	real Qortho(qlen2,arnkryl+1)
-	real hessen(arnkryl+1,arnkryl)
+      real Qortho(qlen2,arnkryl+1)
+      real hessen(arnkryl+1,arnkryl)
 
-	real Ax(qlen2),Axtmp(qlen2),ArWt(qlen2),Axmsk(qlen2)
+      real Ax(qlen2),Axtmp(qlen2),ArWt(qlen2),Axmsk(qlen2)
 
-	common /orthotestv/ qortho,hessen,Ax,Axtmp,ArWt,Axmsk
+      common /orthotestv/ qortho,hessen,Ax,Axtmp,ArWt,Axmsk
 
-	integer ngs	      ! no of Gram-Schmidt
-      integer northo    ! no of Krylov vectors to save
-	integer nkryl	! current size of krylov space
-	integer vlen	! length of krylov vector
-      integer pstep     ! no of steps between stepper
-      integer pinistep  ! no of steps before first krylov vector
+      integer narn_ngs        ! no of Gram-Schmidt
+      integer narn_northo    ! no of Krylov vectors to save
+      integer narn_nkryl     ! current size of krylov space
+      integer narn_vlen      ! length of krylov vector
+      integer narn_step     ! no of steps between stepper
+      integer narn_inistep  ! no of steps before first krylov vector
 
-	common /orthotesti/ ngs,nkryl,northo,vlen,pstep,pinistep
+      common /orthotesti/ narn_ngs,narn_nkryl,narn_northo,narn_vlen,
+     $                    narn_step,narn_inistep
 
-      logical nek_uzawa,ifnekarn,nekarn_ifpr
+      logical narn_uzawa,ifnarn,narn_ifpr
 
-      common /orthotesl/ nek_uzawa,ifnekarn,nekarn_ifpr
+      common /orthotesl/ narn_uzawa,ifnarn,narn_ifpr
+
+
+
+
+
+
+
+
+

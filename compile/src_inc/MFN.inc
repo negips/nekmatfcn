@@ -11,6 +11,11 @@
       parameter (mfnkryl=100)
       parameter (mfnkryl1=mfnkryl+1)
 
+!     Krylov sub-space for Outer Krylov space
+      integer gmrkryl,gmrkryl1
+      parameter (gmrkryl=20)
+      parameter (gmrkryl1=gmrkryl+1)
+
 
 !---------------------------------------------------------------------- 
 

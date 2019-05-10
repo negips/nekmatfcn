@@ -236,6 +236,8 @@ c-----------------------------------------------------------------------
 !
 !      endif        
 
+      call nek_arnoldi_main
+
       call MATF_MAIN
 
       if (ifmatf) then
@@ -248,8 +250,9 @@ c-----------------------------------------------------------------------
         call opcmult(optfx(1,2),optfy(1,2),optfz(1,2),-matf_omega)
       endif
 
-      if (istep.eq.0.and.nkryl.eq.1) then
+!      if (istep.eq.0.and.nkryl.eq.1) then
 !      if (nkryl.eq.1) then
+      if (istep.eq.0) then
         call outpost(vxp(1,1),vyp(1,1),vzp(1,1),prp(1,1),
      $      tp(1,1,1),'pr1') 
         call outpost(vxp(1,2),vyp(1,2),vzp(1,2),prp(1,2),
@@ -259,7 +262,7 @@ c-----------------------------------------------------------------------
 !     $      tp(1,1,1),'pf1')
 
 !      outpost base flow        
-       call outpost(vx,vy,vz,pr,t,'  ') 
+!       call outpost(vx,vy,vz,pr,t,'  ') 
 
       endif        
 

@@ -20,19 +20,19 @@
       integer ierr
 
 !     namelists
-      namelist /NEKARN/ ifnekarn,northo,nek_uzawa,nekarn_ifpr,
-     $                  ngs,pstep,pinistep 
+      namelist /NEKARN/ ifnarn,narn_northo,narn_uzawa,narn_ifpr,
+     $                  narn_ngs,narn_step,narn_inistep 
 
 !     default values
-      ifnekarn          = .FALSE.        ! if perform my Arnoldi
-      nek_uzawa         = .TRUE.         ! uzawa at the first time step?
-      nekarn_ifpr       = .TRUE.         ! if include pressure in
+      ifnarn          = .FALSE.        ! if perform my Arnoldi
+      narn_uzawa        = .TRUE.         ! uzawa at the first time step?
+      narn_ifpr         = .TRUE.         ! if include pressure in
                                          ! arnoldi vector
-      northo            = arnkryl         ! no of vectors to save
-      ngs               = 1              ! no of Gram-Schmidt passes
-      pstep             = 100            ! No of steps between
+      narn_northo       = arnkryl        ! no of vectors to save
+      narn_ngs          = 1              ! no of Gram-Schmidt passes
+      narn_step         = 100            ! No of steps between
                                          ! successive orthogonalization
-      pinistep          = pstep          ! No of steps before taking the
+      narn_inistep      = narn_step      ! No of steps before taking the
                                          ! first krylov vector
                                          
 !     read the file
@@ -43,13 +43,13 @@
       call err_chk(ierr,'Error reading NEKARN parameters.$')
 
 !     broadcast data
-      call bcast(ifnekarn    , LSIZE)
-      call bcast(nek_uzawa     , LSIZE)
-      call bcast(nekarn_ifpr , LSIZE)
-      call bcast(northo        , ISIZE)
-      call bcast(ngs           , ISIZE)
-      call bcast(pstep         , ISIZE)
-      call bcast(pinistep      , ISIZE)
+      call bcast(ifnarn    , LSIZE)
+      call bcast(narn_uzawa     , LSIZE)
+      call bcast(narn_ifpr , LSIZE)
+      call bcast(narn_northo        , ISIZE)
+      call bcast(narn_ngs           , ISIZE)
+      call bcast(narn_step         , ISIZE)
+      call bcast(narn_inistep      , ISIZE)
 
       return
       end subroutine nek_arnoldi_param_in
@@ -69,8 +69,8 @@
       integer ierr
 
 !     namelists
-      namelist /NEKARN/ ifnekarn,northo,nek_uzawa,nekarn_ifpr,
-     $                  ngs,pstep,pinistep 
+      namelist /NEKARN/ ifnarn,narn_northo,narn_uzawa,narn_ifpr,
+     $                  narn_ngs,narn_step,narn_inistep 
 
 !     read the file
       ierr=0
@@ -95,7 +95,7 @@ c-----------------------------------------------------------------------
       include 'SOLN'
       include 'INPUT_DEF'
       include 'INPUT'             ! ifuzawa
-      include 'NLFSI'
+!      include 'NLFSI'
       include 'NEK_ARNOLDI'
 
       include 'MASS_DEF'
@@ -112,16 +112,16 @@ c-----------------------------------------------------------------------
       real nek_wt_innerprod
 
 !     Do nothing if its not on
-      if (.not.ifnekarn) return
+      if (.not.ifnarn) return
+
+      if (istep.lt.narn_inistep) return      
 
       IFUZAWA = .false.
-      if (northo.gt.arnkryl) then
-        call exitti('northo > arnkryl, $', northo)
+      if (narn_northo.gt.arnkryl) then
+        call exitti('narn_northo > arnkryl, $', narn_northo,arnkryl)
       endif
 
-      if ((nkryl.eq.0).and.(istep.lt.pinistep)) return
-
-      if (mod(istep,pstep).ne.0) then
+      if (mod(istep,narn_step).ne.0) then
         return
       endif
 
@@ -138,27 +138,27 @@ c-----------------------------------------------------------------------
       call getAx
 
 !     Remove orthogonal projections
-      i=nkryl
-      do igs=1,ngs            ! No of GS passes
-        do j=1,nkryl
-          hj = nek_wt_innerprod(Ax,Qortho(1,j),vlen) ! find projection
+      i=narn_nkryl
+      do igs=1,narn_ngs            ! No of GS passes
+        do j=1,narn_nkryl
+          hj = nek_wt_innerprod(Ax,Qortho(1,j),narn_vlen) ! find projection
           hessen(j,i)=hessen(j,i) + hj
-          call add2s2(Axtmp,Qortho(1,j),-hj,vlen)    ! remove the projection
+          call add2s2(Axtmp,Qortho(1,j),-hj,narn_vlen)    ! remove the projection
         enddo
-        call copy(Ax,Axtmp,vlen)
+        call copy(Ax,Axtmp,narn_vlen)
       enddo
 !     Add residual to hessenberg Matrix       
-      beta = nek_wt_innerprod(Ax,Ax,vlen)
+      beta = nek_wt_innerprod(Ax,Ax,narn_vlen)
       beta = sqrt(beta)
       hessen(i+1,i)=beta
       
       call outhessen
 
 !     Add unit vector to Qortho
-      call cmult(Ax,1./beta,vlen)
-      call copy(Qortho(1,i+1),Ax,vlen)
-      nkryl=nkryl+1
-      if (nio.eq.0) write(6,'(I5,1x,A9,E25.16E3)') nkryl,
+      call cmult(Ax,1./beta,narn_vlen)
+      call copy(Qortho(1,i+1),Ax,narn_vlen)
+      narn_nkryl=narn_nkryl+1
+      if (nio.eq.0) write(6,'(I5,1x,A9,E25.16E3)') narn_nkryl,
      $                            'Residual=',beta
  
 !      call qorthocheck
@@ -166,7 +166,7 @@ c-----------------------------------------------------------------------
 !     Reset time-stepping
       call nek_stepper_restart       
 
-      if (nkryl.eq.northo+1) then
+      if (narn_nkryl.eq.narn_northo+1) then
         call nek_arnoldi_finalize
       endif
 
@@ -194,9 +194,9 @@ c-----------------------------------------------------------------------
       ntot2=nx2*ny2*nz2*nelv
 
 !     Set weights. 
-!     Also sets Arnoldi vector length (vlen)
-      call set_arnoldi_weight
-!      call set_arnoldi_wtone
+!     Also sets Arnoldi vector length (narn_vlen)
+!      call set_arnoldi_weight
+      call set_arnoldi_wtone
 
 !     Create Masks
       call set_arnoldi_msk
@@ -213,16 +213,16 @@ c-----------------------------------------------------------------------
       call getAx
 
 !     Normalize starting vector
-      vnorm = nek_wt_innerprod(Ax,Ax,vlen)
+      vnorm = nek_wt_innerprod(Ax,Ax,narn_vlen)
       vnorm = sqrt(vnorm)
-      call cmult(Ax,1./vnorm,vlen)
+      call cmult(Ax,1./vnorm,narn_vlen)
 
       if (nio.eq.0) write(6,*) 'Initial Residual=',vnorm
 
 !     Add starting vector to Krylov space
-      call copy(Qortho(1,1),Ax,vlen)
-      nkryl = 0       ! we don't want to pick the random initial condition
-      pinistep = pstep  ! we don't want the long initial
+      call copy(Qortho(1,1),Ax,narn_vlen)
+      narn_nkryl = 1       ! we don't want to pick the random initial condition
+      narn_inistep = 0    ! Remove long transient after initialization
 
 !      call qorthocheck
 
@@ -243,8 +243,8 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'INPUT_DEF'
       include 'INPUT'
-      include 'FSI'
-      include 'NLFSI'
+!      include 'FSI'
+!      include 'NLFSI'
       include 'NEK_ARNOLDI'  
         
       integer ifld,nfaces,iel,iface
@@ -279,27 +279,27 @@ c-----------------------------------------------------------------------
         i=i+ntot
       endif
 
-      if (nekarn_ifpr) then
+      if (narn_ifpr) then
         ntotp=nx2*ny2*nz2*nelv
         call rone(Axmsk(i),ntotp)
         i=i+ntotp
       endif  
 
-      if (IFFSI) then
-        if (nid.eq.0) then       
-          call copy(Axmsk(i),1.0,1)
-          i=i+1
-          call copy(Axmsk(i),1.0,1)
-          i=i+1
-        endif
-      elseif (IFNLFSI) then
-        if (nid.eq.0) then
-          call copy(Axmsk(i),1.0,1)
-          i=i+1
-          call copy(Axmsk(i),1.0,1)
-          i=i+1
-        endif      
-      endif
+!      if (IFFSI) then
+!        if (nid.eq.0) then       
+!          call copy(Axmsk(i),1.0,1)
+!          i=i+1
+!          call copy(Axmsk(i),1.0,1)
+!          i=i+1
+!        endif
+!      elseif (IFNLFSI) then
+!        if (nid.eq.0) then
+!          call copy(Axmsk(i),1.0,1)
+!          i=i+1
+!          call copy(Axmsk(i),1.0,1)
+!          i=i+1
+!        endif      
+!      endif
 
       return
       end subroutine set_arnoldi_msk
@@ -317,8 +317,8 @@ c-----------------------------------------------------------------------
       include 'SOLN'
       include 'INPUT_DEF'
       include 'INPUT'
-      include 'FSI'
-      include 'NLFSI'
+!      include 'FSI'
+!      include 'NLFSI'
       include 'NEK_ARNOLDI'
 
       integer i,ntot,ntotp
@@ -334,27 +334,27 @@ c-----------------------------------------------------------------------
         i=i+ntot
       endif
 
-      if (nekarn_ifpr) then
+      if (narn_ifpr) then
         ntotp=nx2*ny2*nz2*nelv
         call copy(Ax(i),prp,ntotp)
         i=i+ntotp
       endif  
 
-      if (IFFSI) then
-        if (nid.eq.0) then       
-          call col3(Ax(i),eta,Axmsk(i),1)
-          i=i+1
-          call col3(Ax(i),etav,Axmsk(i),1)
-          i=i+1
-        endif
-      elseif (IFNLFSI) then
-        if (nid.eq.0) then
-          call col3(Ax(i),psi,Axmsk(i),1)
-          i=i+1
-          call col3(Ax(i),psiv,Axmsk(i),1)
-          i=i+1
-        endif      
-      endif
+!      if (IFFSI) then
+!        if (nid.eq.0) then       
+!          call col3(Ax(i),eta,Axmsk(i),1)
+!          i=i+1
+!          call col3(Ax(i),etav,Axmsk(i),1)
+!          i=i+1
+!        endif
+!      elseif (IFNLFSI) then
+!        if (nid.eq.0) then
+!          call col3(Ax(i),psi,Axmsk(i),1)
+!          i=i+1
+!          call col3(Ax(i),psiv,Axmsk(i),1)
+!          i=i+1
+!        endif      
+!      endif
 
       call copy(Axtmp,Ax,i-1)
 
@@ -378,8 +378,8 @@ c-----------------------------------------------------------------------
       include 'INPUT'
       include 'ADJOINT_DEF'
       include 'ADJOINT'
-      include 'FSI'
-      include 'NLFSI'
+!      include 'FSI'
+!      include 'NLFSI'
       include 'NEK_ARNOLDI'
 
       integer i,ntot,ntotp
@@ -396,41 +396,41 @@ c-----------------------------------------------------------------------
       endif
 
       ntotp=nx2*ny2*nz2*nelv
-      if (nekarn_ifpr) then
+      if (narn_ifpr) then
         call copy(prp,Ax(i),ntotp)
         i=i+ntotp
       else
         call rzero(prp,ntotp)  
       endif  
 
-      if (IFFSI) then
-        if (nid.eq.0) then       
-          call copy(eta,Ax(i),1)
-          i=i+1
-          call copy(etav,Ax(i),1)
-          i=i+1
-        endif
-
-        call bcast(eta,wdsize)
-        call bcast(etav,wdsize)
-
-        eta_s  = eta
-        etav_s = etav
-
-      elseif (IFNLFSI) then
-        if (nid.eq.0) then
-          call copy(psi,Ax(i),1)
-          i=i+1
-          call copy(psiv,Ax(i),1)
-          i=i+1
-        endif
-        call bcast(psi,wdsize)
-        call bcast(psiv,wdsize)
-
-        psi_s  = psi
-        psiv_s = psiv
-
-      endif
+!      if (IFFSI) then
+!        if (nid.eq.0) then       
+!          call copy(eta,Ax(i),1)
+!          i=i+1
+!          call copy(etav,Ax(i),1)
+!          i=i+1
+!        endif
+!
+!        call bcast(eta,wdsize)
+!        call bcast(etav,wdsize)
+!
+!        eta_s  = eta
+!        etav_s = etav
+!
+!      elseif (IFNLFSI) then
+!        if (nid.eq.0) then
+!          call copy(psi,Ax(i),1)
+!          i=i+1
+!          call copy(psiv,Ax(i),1)
+!          i=i+1
+!        endif
+!        call bcast(psi,wdsize)
+!        call bcast(psiv,wdsize)
+!
+!        psi_s  = psi
+!        psiv_s = psiv
+!
+!      endif
 
 
       return
@@ -482,8 +482,8 @@ c-----------------------------------------------------------------------
       include 'MASS'        ! BM1
       include 'INPUT_DEF'
       include 'INPUT'
-      include 'FSI'
-      include 'NLFSI'
+!      include 'FSI'
+!      include 'NLFSI'
       include 'NEK_ARNOLDI'
 
       integer i,ntot,ntotp
@@ -500,7 +500,7 @@ c-----------------------------------------------------------------------
       endif
 
       
-      if (nekarn_ifpr) then
+      if (narn_ifpr) then
         ntotp=nx2*ny2*nz2*nelv
 !        call copy(ArWt(i),BM2,ntotp)
 
@@ -527,8 +527,8 @@ c-----------------------------------------------------------------------
 !      endif
 
 !     Size of krylov vector
-      vlen = i-1
-!      if (nio.eq.0) write(6,*) 'Arnoldi vector length=',vlen
+      narn_vlen = i-1
+!      if (nio.eq.0) write(6,*) 'Arnoldi vector length=',narn_vlen
 
       return
       end subroutine set_arnoldi_weight
@@ -546,8 +546,8 @@ c-----------------------------------------------------------------------
       include 'SOLN'
       include 'INPUT_DEF'
       include 'INPUT'
-      include 'FSI'
-      include 'NLFSI'
+!      include 'FSI'
+!      include 'NLFSI'
       include 'NEK_ARNOLDI'
 
       integer i,ntot,ntotp
@@ -563,7 +563,7 @@ c-----------------------------------------------------------------------
         i=i+ntot
       endif
 
-      if (nekarn_ifpr) then
+      if (narn_ifpr) then
         ntotp=nx2*ny2*nz2*nelv
 !        call rone(ArWt(i),ntotp)
 
@@ -574,21 +574,24 @@ c-----------------------------------------------------------------------
         i=i+ntotp
       endif  
 
-      if (IFFSI) then
-        if (nid.eq.0) then       
-          call copy(ArWt(i),1.0,1)
-          i=i+1
-          call copy(ArWt(i),1.0,1)
-          i=i+1
-        endif
-      elseif (IFNLFSI) then
-        if (nid.eq.0) then
-          call copy(ArWt(i),1.0,1)
-          i=i+1
-          call copy(ArWt(i),1.0,1)
-          i=i+1
-        endif 
-      endif
+!      if (IFFSI) then
+!        if (nid.eq.0) then       
+!          call copy(ArWt(i),1.0,1)
+!          i=i+1
+!          call copy(ArWt(i),1.0,1)
+!          i=i+1
+!        endif
+!      elseif (IFNLFSI) then
+!        if (nid.eq.0) then
+!          call copy(ArWt(i),1.0,1)
+!          i=i+1
+!          call copy(ArWt(i),1.0,1)
+!          i=i+1
+!        endif 
+!      endif
+
+!     Size of krylov vector
+      narn_vlen = i-1
 
       return
       end subroutine set_arnoldi_wtone
@@ -606,9 +609,11 @@ c-----------------------------------------------------------------------
       integer i
 
       call blank(outfmt,64)
-      write(outfmt,'(A10,I5,A14)') '(A6,1x,I5,',nkryl+1,'(E25.16E3,1x))'
+      write(outfmt,'(A10,I5,A14)') '(A6,1x,I5,',narn_nkryl+1,
+     $      '(E25.16E3,1x))'
       if (nio.eq.0) then
-        write(6,outfmt) 'hessen',nkryl, (hessen(i,nkryl),i=1,nkryl+1)
+        write(6,outfmt) 'hessen',narn_nkryl, (hessen(i,narn_nkryl),
+     $                  i=1,narn_nkryl+1)
       endif  
 
       return
@@ -629,16 +634,17 @@ c-----------------------------------------------------------------------
       real nek_wt_innerprod
       real vlamax
 
-      do i=1,nkryl
-        r(i)=nek_wt_innerprod(Qortho(1,i),Qortho(1,nkryl),vlen)
+      do i=1,narn_nkryl
+        r(i)=nek_wt_innerprod(Qortho(1,i),Qortho(1,narn_nkryl),
+     $                  narn_vlen)
       enddo
 
       call blank(outfmt,64)
       i=2
       write(outfmt,'(A10,I5,A13)') '(A6,1x,I5,',i,'(E17.8E3,1x))'
       if (nio.eq.0) then
-        rmax=vlamax(r,nkryl-1)
-        write(6,outfmt) 'qortho',nkryl,rmax,r(nkryl)
+        rmax=vlamax(r,narn_nkryl-1)
+        write(6,outfmt) 'qortho',narn_nkryl,rmax,r(narn_nkryl)
       endif  
 
       return
@@ -660,13 +666,13 @@ c-----------------------------------------------------------------------
       ntot = nx1*ny1*nz1*nelv
 
       call outfile_hessen
-      if (nekarn_ifpr) then
-        do i=1,nkryl
+      if (narn_ifpr) then
+        do i=1,narn_nkryl
           call outpost(Qortho(1,i),Qortho(1+ntot,i),
      $          Qortho(1+2*ntot,i),Qortho(1+ndim*ntot,i),tp,'qor')
         enddo
       else
-        do i=1,nkryl
+        do i=1,narn_nkryl
           call outpost(Qortho(1,i),Qortho(1+ntot,i),
      $          Qortho(1+2*ntot,i),prp,tp,'qor')
         enddo
@@ -690,13 +696,13 @@ c-----------------------------------------------------------------------
       integer i,j
 
       call blank(outfmt,64)
-      write(outfmt,'(A1,I5,A14)') '(',northo,'(E25.16E3,1x))'
+      write(outfmt,'(A1,I5,A14)') '(',narn_northo,'(E25.16E3,1x))'
 
       if (nid.eq.0) then
         open(unit=10101,file='hessenberg',status='unknown',
      $      form='formatted')
-        do i=1,northo+1
-          write(10101,outfmt) (hessen(i,j),j=1,northo)
+        do i=1,narn_northo+1
+          write(10101,outfmt) (hessen(i,j),j=1,narn_northo)
         enddo
         close(10101) 
       endif  
@@ -748,7 +754,7 @@ c-----------------------------------------------------------------------
 !        endif  
 !      endif
 
-      ifuzawa = nek_uzawa
+      ifuzawa = narn_uzawa
 
       return
       end subroutine nek_stepper_restart

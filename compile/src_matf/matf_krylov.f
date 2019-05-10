@@ -970,7 +970,7 @@ c-----------------------------------------------------------------------
 
       real resid
       real lntol
-      parameter (lntol=1.0e-6)
+      parameter (lntol=1.0e-8)
 
 
 !     Evaluate approximate matrix function
@@ -982,7 +982,7 @@ c-----------------------------------------------------------------------
       call nek_zcopy(MATF_HINV,MATF_HS,lda*nc)
 
 !     Debugging      
-      call fwrite_zmat(MATF_HINV,mfnkryl1,nc,nc,'Hes')      
+!      call fwrite_zmat(MATF_HINV,mfnkryl1,nc,nc,'Hes')      
 
       call MAT_ZFCN_LN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,pmo,ifinv)
 !      call MAT_ZFCN(MATF_HWK,MATF_HINV,HS_WK2,lda,nc,fcn,ifinv)
@@ -990,7 +990,7 @@ c-----------------------------------------------------------------------
       resid = abs(MATF_HWK(nc,1))
 
 !     Debugging      
-      call fwrite_zmat(MATF_HWK,mfnkryl1,nc,nc,'LnA') 
+!      call fwrite_zmat(MATF_HWK,mfnkryl1,nc,nc,'LnA') 
 
 
       if (nid.eq.0) then
@@ -1006,7 +1006,7 @@ c-----------------------------------------------------------------------
 
 !     If the weight is small we are converged      
       if (resid.lt.lntol) then
-!!      Approximate f(A)*x      
+!!      Approximate f(A)*x 
         alpha = complex(1.0,0)
         beta  = complex(0.,0.)
         trans = 'N'
@@ -1062,6 +1062,7 @@ c-----------------------------------------------------------------------
 
       complex MATF_INPROD
 
+      real resid
 
       call nek_zzero(hj,mfnkryl1)
       call nek_zzero(gj,mfnkryl1)
@@ -1111,7 +1112,20 @@ c-----------------------------------------------------------------------
       hj(gmr_nkryl+1)=beta
       call nek_zcopy(GMR_HS(1,gmr_nkryl),hj,gmr_nkryl+1)
 
-!     Debugging      
+      call nek_zcopy(GMR_HWK,GMR_HS,gmrkryl1*gmr_nkryl)
+
+!     invert matrix
+      lda=gmrkryl1
+      n  =gmr_nkryl
+      call wrp_zgeinv(GMR_HWK,lda,n)
+
+      resid = abs(GMR_HWK(n,1))
+      if (nid.eq.0) then
+!       This is the weight of the new vector
+        write(6,*) 'GMR_HS^{-1} Weight: ',n,resid
+      endif
+
+!     Debugging 
 !      call write_zmat(GMR_HS,gmrkryl1,gmr_nkryl+1,gmr_nkryl,'GMR')
 
 !     Normalize vector 
@@ -1123,9 +1137,18 @@ c-----------------------------------------------------------------------
       call nek_zcopy(GMR_Q(1,gmr_nkryl),MATF_Ax,vlen)
 
 !     Reinitialize Orthogonal basis for Matrix log
-      nkryl = 1
-      call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
 
+!     Zero Hessenberg matrix
+      i=mfnkryl1*mfnkryl
+      call nek_zzero(MATF_HS,i)
+
+!     Zero Qortho matrix
+      i=qlen0*mfnkryl1
+      call nek_zzero(MATF_Q,i)
+
+      call nek_zcopy(MATF_Q(1,1),MATF_Ax,vlen)
+      nkryl = 1
+      
 !     Just exit for now      
       if (gmr_nkryl.eq.gmrkryl1) call exitt
 

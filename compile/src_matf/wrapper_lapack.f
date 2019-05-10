@@ -173,8 +173,6 @@
 
       integer i
 
-      character*23 fname
-
 !     Define LAPACK-variables
       jobvs = 'V'
       esort = 'N'
@@ -250,14 +248,11 @@
 
       integer i
 
-      character*23 fname
-
 !     Define LAPACK-variables
       jobvs = 'N'
       esort = 'N'
 
-
-!     Compute complex-Schur decomposition in double precision
+!     Compute complex-Schur decomposition in Single precision
       call cgees(jobvs,esort,selec,n,Amat,lda,sdim,w,VS,ldvs,
      $     CSCHUR_WKC,CSCHUR_WCL,CSCHUR_WKR,CSCHUR_WKB,info)
 
@@ -328,8 +323,6 @@
 
       integer i
 
-      character*23 fname
-
 !     Define LAPACK-variables
       jobvs = 'V'
       esort = 'N'
@@ -370,4 +363,79 @@
       return
       end subroutine wrp_zschur
 !----------------------------------------------------------------------
+
+      subroutine wrp_zgeinv(Amat,lda,n)
+
+!     LAPACK interface for general Complex matrix inversion.
+
+      implicit none
+
+      include 'SIZE_DEF'
+      include 'SIZE'
+      include 'WRP_LAPACK'
+
+      integer info      ! = 0:  successful exit.
+                        ! < 0:  if INFO = -i, the i-th argument had an illegal value.
+                        ! > 0:  DBDSDC did not converge, updating process failed. 
+
+      integer m         ! rows of the Matrix A(lda,n)
+      integer n         ! Columns of the Matrix A(lda,n)
+      integer lda       ! leading dimension of the matrix A
+
+      complex Amat(lda,n)  ! compute Schur form of Amat
+
+
+!     Perform LU decomposition
+      m=n
+      call zgetrf(m,n,Amat,lda,ZGEINV_WKI,info)
+
+!     Error-check
+      if (info.lt.0) then
+        if (nid.eq.0) write(6,*)
+     $       'ERROR: the i:th argment had an illegal value.', abs(info)
+        call exitt
+      elseif (info.gt.0) then
+        if (nid.eq.0) then
+          write(6,*)
+     $     'ERROR: U(i,i) is exactly zero in zgetrf.'
+     $     ,info
+        endif               
+        call exitt
+      else
+        if (nid.eq.0) write(6,*) 'ZGETRF: successful exit!'
+      endif
+
+!     Matrix inversion
+      call zgetri(n,Amat,lda,ZGEINV_WKI,ZGEINV_WKC,ZGEINV_WCL,info)
+
+!     Error-check
+      if (info.lt.0) then
+        if (nid.eq.0) write(6,*)
+     $       'ERROR: the i:th argment had an illegal value.', abs(info)
+        call exitt
+      elseif (info.gt.0) then
+        if (nid.eq.0) then
+          write(6,*)
+     $     'ERROR: U(i,i) is exactly zero in zgetri.'
+     $     ,info
+        endif               
+        call exitt
+      else
+        if (nid.eq.0) write(6,*) 'ZGETRI: successful exit!'
+      endif
+
+
+      return
+      end subroutine wrp_zgeinv
+!----------------------------------------------------------------------       
+
+
+
+
+
+
+
+
+
+
 

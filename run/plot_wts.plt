@@ -1,4 +1,4 @@
-system("grep Weight logfile > wts")
+system("grep Qk logfile > wts")
 
 set logscale y
 
