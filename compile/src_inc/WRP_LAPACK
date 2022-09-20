@@ -3,10 +3,11 @@ c     Declaration for LAPACK work arrays
 
 !     load memory controlling variables
 !     for the wrapper 
-      include 'MFN.inc'
+!      include 'MFN.inc'
 
+!     Lapack Krylov
       integer lapkryl,lapkryl1
-      parameter (lapkryl  = mfnkryl)  ! We can change this depending on usage
+      parameter (lapkryl  = 100)  ! We can change this depending on usage
       parameter (lapkryl1 = lapkryl+1)
 
 !     Switches for different arrays
@@ -16,6 +17,7 @@ c     Declaration for LAPACK work arrays
 !     DP - Double Precision
 !     SP - Single Precision      
 
+!     SW - Switch
       integer SW_LLS
       parameter (SW_LLS       =-1)! Linear-Least-Squares (DP)
       integer SW_SVD
@@ -25,11 +27,15 @@ c     Declaration for LAPACK work arrays
       integer SW_CSCHUR
       parameter (SW_CSCHUR    =-1)! Complex Schur Decomposition (SP)
       integer SW_ZSCHUR
-      parameter (SW_ZSCHUR    = 1)! Complex Schur Decomposition (DP)
+      parameter (SW_ZSCHUR    =-1)! Complex Schur Decomposition (DP)
       integer SW_ZGEINV
-      parameter (SW_ZGEINV    = 1)! Complex Matrix Inversion (DP)
+      parameter (SW_ZGEINV    =-1)! Complex Matrix Inversion (DP)
       integer SW_ZEIG
-      parameter (SW_ZEIG      = 1)! Eigenpar Decomposition of complex matrix(DP)
+      parameter (SW_ZEIG      =-1)! Eigenpar Decomposition of complex matrix(DP)
+      integer SW_DGEINV
+      parameter (SW_DGEINV    =-1)! Real Matrix Inversion (DP)
+      integer SW_DGEEV
+      parameter (SW_DGEEV     = 1)! Real Matrix Eigen Decomposition (DP)
 
 
 !---------------------------------------------------------------------- 
@@ -37,17 +43,15 @@ c     Declaration for LAPACK work arrays
 
 c     Length of arrays 
       integer LLS_WRL               ! Work Array Size (Real)
-      integer LLS_WIL               ! Work Array Size (Int)
 
       integer BLKSIZ                   ! See doc.
-      parameter (BLKSIZ=64)
+      parameter (BLKSIZ=16)
 
-      parameter (LLS_WRL=max(SW_LLS*(LAPKRYL1+LAPKRYL1*BLKSIZ),1))
-      parameter (LLS_WIL=max(SW_LLS*(3*LAPKRYL1*2+11*LAPKRYL1),1))  
+      parameter (LLS_WRL=max(SW_LLS*(LAPKRYL1*LAPKRYL
+     $                       +LAPKRYL1*LAPKRYL*BLKSIZ),1))
 
 c     Work arrays
       real    LLS_WKR(LLS_WRL)
-      integer LLS_WKI(LLS_WIL)
       
 !---------------------------------------------------------------------- 
 !     Arrays for SVD 
@@ -119,21 +123,19 @@ c     Work arrays
 !     ZGETRF - LU Decomposition
 !     ZGETRI - Inversion after LU decomposition
 
-!     Note: This one uses GMRKRYL1 for Memory size
-
 c     Length of arrays 
-      integer ZGEINV_WCL               ! Work Array Size (Complex)
-      integer ZGEINV_WIL               ! Work Array Size (Integer)
+      integer ZGEINV_WCL               ! Complex Work Array Size
+      integer ZGEINV_WIL               ! Integer Work Array Size
 
       integer ZGEINV_BKSIZ             ! Block Size. Set Arbitrarily for
       parameter (ZGEINV_BKSIZ=16)      ! now
       
-      parameter (ZGEINV_WCL=max(SW_ZGEINV*(ZGEINV_BKSIZ*GMRKRYL1),1))
-      parameter (ZGEINV_WIL=max(SW_ZGEINV*(GMRKRYL1),1))  
+      parameter (ZGEINV_WCL=max(SW_ZGEINV*(ZGEINV_BKSIZ*LAPKRYL1),1))
+      parameter (ZGEINV_WIL=max(SW_ZGEINV*(LAPKRYL1),1))  
 
 c     Work arrays
-      complex     ZGEINV_WKC(ZSCHUR_WCL)
-      integer     ZGEINV_WKI(ZSCHUR_WBL)  ! IPIV in documentation
+      complex     ZGEINV_WKC(ZGEINV_WCL)
+      integer     ZGEINV_WKI(ZGEINV_WIL)  ! IPIV in documentation
 
 !---------------------------------------------------------------------- 
 !     Arrays for Double Precision Eigenpair Decomposition of
@@ -149,6 +151,38 @@ c     Length of arrays
 c     Work arrays
       real        ZEIG_WKR(ZEIG_WRL)
       complex     ZEIG_WKC(ZEIG_WCL)
+
+!---------------------------------------------------------------------- 
+!     Arrays for Double Real Matrix Inversion
+!     DGETRF - LU Decomposition
+!     DGETRI - Inversion after LU decomposition
+
+c     Length of arrays 
+      integer DGEINV_WRL               ! Real Work Array Size
+      integer DGEINV_WIL               ! Integer Work Array Size
+
+      integer DGEINV_BKSIZ             ! Block Size. Set Arbitrarily for
+      parameter (DGEINV_BKSIZ=16)      ! now
+      
+      parameter (DGEINV_WRL=max(SW_DGEINV*(DGEINV_BKSIZ*LAPKRYL1),1))
+      parameter (DGEINV_WIL=max(SW_DGEINV*(LAPKRYL1),1))  
+
+c     Work arrays
+      real        DGEINV_WKR(DGEINV_WRL)
+      integer     DGEINV_WKI(DGEINV_WIL)  ! IPIV in documentation
+
+!---------------------------------------------------------------------- 
+!     Arrays for Double Precision Eigenpair Decomposition of
+!     a general real matrix
+!     DGEEV - Eigen-pair decomposition      
+
+c     Length of arrays 
+      integer DGEEV_WRL               ! Work Array Size (Real)
+      
+      parameter (DGEEV_WRL=max(SW_DGEEV*(6*LAPKRYL1),1))
+
+c     Work arrays
+      real        DGEEV_WKR(DGEEV_WRL)
 
 !---------------------------------------------------------------------- 
 
